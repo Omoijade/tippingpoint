@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipping Point — Observatory & Debrief Tool</title>
+<style>
+/* ============================================================
+   TIPPING POINT OBSERVATORY
+   Single-file facilitator tool: explain the game, log play live,
+   turn what you watch into clear measures + suggestions.
+   Design: DEFT (Design / Engage / Facilitate / Transfer) + Sweller CLT.
+   Palette matches the physical game tokens.
+   ============================================================ */
+:root{
+  --forest:#2e7d32; --forest-soft:#e3f0e4;
+  --house:#1565c0;  --house-soft:#e3edf9;
+  --resource:#546e7a; --resource-soft:#e9edef;
+  --waste:#c62828;  --waste-soft:#fbe6e6;
+  --accent:#0f766e; --accent-soft:#dcf1ee;
+  --ink:#16282f; --muted:#5d7079; --line:#e2e8ea;
+  --bg:#f3f6f5; --card:#ffffff; --warn:#b45309; --warn-soft:#fdf0db;
+  --good:#15803d; --shadow:0 1px 2px rgba(16,40,47,.06),0 4px 16px rgba(16,40,47,.06);
+  --radius:14px; --radius-sm:9px;
+  --sans:'Segoe UI',Roboto,-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0 0 .4em;line-height:1.2;font-weight:650}
+h1{font-size:1.45rem} h2{font-size:1.18rem} h3{font-size:1rem} h4{font-size:.85rem}
+p{margin:0 0 .7em}
+a{color:var(--accent)}
+small{color:var(--muted)}
+button{font-family:inherit;cursor:pointer}
+
+/* ---------- Layout ---------- */
+header.app{position:sticky;top:0;z-index:50;background:linear-gradient(110deg,#0f3a32,#15564a);color:#fff;box-shadow:var(--shadow)}
+.bar{max-width:1180px;margin:0 auto;padding:.7rem 1.1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.05rem;letter-spacing:.2px}
+.brand .dot{width:26px;height:26px;border-radius:7px;background:conic-gradient(var(--forest) 0 40%,var(--house) 0 65%,var(--waste) 0 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+nav.tabs{display:flex;gap:.25rem;margin-left:auto;flex-wrap:wrap}
+nav.tabs button{background:rgba(255,255,255,.08);color:#eafaf5;border:0;padding:.5rem .85rem;border-radius:999px;font-size:.86rem;font-weight:600;display:flex;align-items:center;gap:.4rem;transition:.15s}
+nav.tabs button:hover{background:rgba(255,255,255,.2)}
+nav.tabs button.active{background:#fff;color:var(--accent)}
+.context-chip{font-size:.78rem;background:rgba(255,255,255,.12);padding:.3rem .6rem;border-radius:999px;color:#dff7f0}
+main{max-width:1180px;margin:0 auto;padding:1.2rem 1.1rem 4rem}
+section.view{display:none;animation:fade .2s ease}
+section.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.1rem 1.2rem;box-shadow:var(--shadow);margin-bottom:1.1rem}
+.grid{display:grid;gap:1.1rem}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.spread{justify-content:space-between}
+.muted{color:var(--muted)}
+.eyebrow{text-transform:uppercase;letter-spacing:.08em;font-size:.7rem;font-weight:700;color:var(--accent)}
+.divider{height:1px;background:var(--line);margin:1rem 0}
+
+/* ---------- Buttons ---------- */
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:.55rem .9rem;border-radius:var(--radius-sm);font-weight:600;font-size:.88rem;transition:.15s;display:inline-flex;align-items:center;gap:.45rem}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#0c5f59;color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--waste)}
+.btn.sm{padding:.35rem .6rem;font-size:.8rem}
+.btn.block{width:100%;justify-content:center}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* ---------- Forms ---------- */
+label.field{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin:.5rem 0 .2rem}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  width:100%;padding:.55rem .65rem;border:1px solid var(--line);border-radius:var(--radius-sm);font-family:inherit;font-size:.92rem;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+textarea{resize:vertical;min-height:54px}
+
+/* steppers */
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.stepper button{border:0;background:#f6f8f8;width:30px;height:30px;font-size:1.1rem;font-weight:700;color:var(--accent)}
+.stepper button:hover{background:var(--accent-soft)}
+.stepper .val{min-width:30px;text-align:center;font-weight:700;font-size:.95rem}
+
+/* ---------- Token chips / pills ---------- */
+.tok{display:inline-flex;align-items:center;gap:.35rem;font-weight:700;font-size:.8rem;padding:.18rem .55rem;border-radius:999px}
+.tok.forest{background:var(--forest-soft);color:var(--forest)}
+.tok.house{background:var(--house-soft);color:var(--house)}
+.tok.resource{background:var(--resource-soft);color:var(--resource)}
+.tok.waste{background:var(--waste-soft);color:var(--waste)}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+.sw.forest{background:var(--forest)} .sw.house{background:var(--house)} .sw.resource{background:var(--resource)} .sw.waste{background:var(--waste)}
+
+.tag{display:inline-block;font-size:.72rem;font-weight:700;padding:.18rem .5rem;border-radius:6px;background:var(--accent-soft);color:var(--accent)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.tag.good{background:#e4f5e9;color:var(--good)}
+.tag.bad{background:var(--waste-soft);color:var(--waste)}
+
+/* ---------- Accordion (Learn) ---------- */
+.acc{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:.6rem;overflow:hidden;background:#fff}
+.acc>summary{padding:.8rem 1rem;font-weight:650;cursor:pointer;list-style:none;display:flex;align-items:center;gap:.6rem}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary::after{content:'＋';margin-left:auto;color:var(--accent);font-weight:700}
+.acc[open]>summary::after{content:'－'}
+.acc .body{padding:0 1rem 1rem;border-top:1px solid var(--line)}
+.acc .body{padding-top:.8rem}
+
+/* ---------- Observe ---------- */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;padding:.45rem .85rem;font-weight:650;font-size:.85rem;color:var(--muted)}
+.seg button.active{background:var(--accent);color:#fff}
+.rounddots{display:flex;gap:.35rem;flex-wrap:wrap}
+.rdot{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.rdot.active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.rdot.done{background:var(--accent);color:#fff;border-color:var(--accent)}
+.rdot.closed{background:#0f3a32;color:#fff;border-color:#0f3a32}
+
+.teamcard{border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .8rem;background:#fff}
+.teamcard.logged{border-color:var(--forest);background:linear-gradient(0deg,var(--forest-soft),#fff)}
+.actiongrid{display:grid;grid-template-columns:repeat(2,1fr);gap:.45rem;margin:.5rem 0}
+.act{border:1.5px solid var(--line);border-radius:var(--radius-sm);background:#fff;padding:.55rem;text-align:left;font-weight:650;font-size:.82rem;display:flex;flex-direction:column;gap:.15rem}
+.act small{font-size:.68rem;font-weight:500}
+.act:hover{border-color:var(--accent)}
+.act.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.act.bs{} .act.bl{} .act.rn{} .act.rw{}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:.32rem .6rem;font-size:.76rem;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:.3rem}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.lev{border:1px solid var(--line);background:#fff;border-radius:999px;padding:.32rem .7rem;font-size:.76rem;font-weight:700}
+.lev.shallow.on{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.lev.deep.on{background:#e4f5e9;border-color:var(--good);color:var(--good)}
+
+/* board grid (mirrors the 36-hex island) */
+.hexgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:300px}
+.cell{aspect-ratio:1;border-radius:6px;background:#eee}
+.cell.free{background:var(--forest-soft);box-shadow:inset 0 0 0 1.5px var(--forest)}
+.boardbar{height:22px;border-radius:6px;overflow:hidden;display:flex;border:1px solid var(--line)}
+.boardbar div{height:100%}
+/* entry steps */
+.step{font-size:.78rem;font-weight:700;color:var(--accent);margin:.7rem 0 .15rem}
+.ctx{display:flex;flex-direction:column;gap:.4rem;margin:.3rem 0}
+.ctxrow{display:flex;align-items:center;justify-content:space-between;gap:.6rem;border:1px solid var(--line);border-radius:var(--radius-sm);padding:.45rem .6rem}
+.ctxrow strong{font-size:.86rem;font-weight:600}
+
+/* ---------- Metric cards ---------- */
+.metric{border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;background:#fff;position:relative}
+.metric .v{font-size:1.7rem;font-weight:750;line-height:1}
+.metric .lab{font-size:.8rem;font-weight:650;color:var(--muted);margin-top:.2rem}
+.metric .delta{font-size:.74rem;font-weight:700;margin-top:.35rem}
+.metric .help{position:absolute;top:.7rem;right:.8rem;width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;outline:none}
+.help .tip{position:absolute;right:-2px;top:150%;width:240px;max-width:62vw;background:#16282f;color:#fff;font-weight:500;font-size:.76rem;line-height:1.45;padding:.6rem .7rem;border-radius:9px;box-shadow:0 8px 26px rgba(16,40,47,.28);opacity:0;visibility:hidden;transform:translateY(-4px);transition:.14s;z-index:90;text-align:left;pointer-events:none}
+.help:hover .tip,.help:focus .tip,.help:focus-within .tip{opacity:1;visibility:visible;transform:none}
+.help .tip::after{content:'';position:absolute;right:6px;top:-5px;border:6px solid transparent;border-bottom-color:#16282f;border-top:0}
+.up{color:var(--good)} .down{color:var(--waste)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{text-align:left;padding:.45rem .55rem;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:650;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em}
+tbody tr:hover{background:#fafcfb}
+.scroll{overflow:auto}
+
+/* recommendations */
+.rec{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:.7rem .9rem;margin-bottom:.6rem}
+.rec.warn{border-color:var(--warn);background:var(--warn-soft)}
+.rec.good{border-color:var(--good);background:#e4f5e9}
+.rec h4{margin:0 0 .2rem}
+.rec p{margin:0;font-size:.86rem}
+
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--muted)}
+.empty .big{font-size:2.2rem;margin-bottom:.4rem}
+.toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#16282f;color:#fff;padding:.6rem 1rem;border-radius:999px;font-size:.85rem;font-weight:600;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s;z-index:200}
+.toast.show{opacity:1}
+
+/* legend */
+.legend{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:.35rem}
+
+.appfoot{margin-top:1.5rem;padding:1.2rem 0 0;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:.82rem}
+.appfoot p{margin:0 0 .3rem}
+.appfoot a{color:var(--accent);font-weight:600;text-decoration:none}
+.appfoot a:hover{text-decoration:underline}
+.appfoot .dotsep{margin:0 .4rem;opacity:.5}
+@media(max-width:560px){.actiongrid{grid-template-columns:1fr}.bar{padding:.6rem .8rem}}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="bar">
+    <div class="brand"><span class="dot"></span> Tipping Point — Observatory</div>
+    <span class="context-chip" id="ctxChip">No workshop selected</span>
+    <nav class="tabs" id="tabs">
+      <button data-tab="home" class="active">🏠 Home</button>
+      <button data-tab="learn">📖 Explain the game</button>
+      <button data-tab="observe">🔭 Observe play</button>
+      <button data-tab="insights">📊 Insights</button>
+      <button data-tab="data">🗂️ Data</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ============== HOME ============== -->
+  <section class="view active" id="view-home"></section>
+  <!-- ============== LEARN ============== -->
+  <section class="view" id="view-learn"></section>
+  <!-- ============== OBSERVE ============== -->
+  <section class="view" id="view-observe"></section>
+  <!-- ============== INSIGHTS ============== -->
+  <section class="view" id="view-insights"></section>
+  <!-- ============== DATA ============== -->
+  <section class="view" id="view-data"></section>
+
+  <footer class="appfoot">
+    <p>Tipping Point is a research game by Thomas-Julian Irabor and colleagues at the University of Liège.</p>
+    <p>
+      <a href="https://www.nature.com/articles/s41599-025-04990-x" target="_blank" rel="noopener">Read the study</a>
+      — Irabor et al. (2025), <em>Humanities and Social Sciences Communications</em>.
+      <span class="dotsep">·</span>
+      <a href="https://www.linkedin.com/in/irabor/" target="_blank" rel="noopener">Get in touch on LinkedIn</a>.
+    </p>
+  </footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const KEY='tippingPointObservatory_v1';
+const ACTIONS={
+  build_small:{label:'Build · small house',short:'Small house',pts:1,waste:1,cls:'bs',icon:'🏠',
+    cost:'1 R1',gain:'+1 pt',note:'1 R1 · +1 pt · +1 waste/turn'},
+  build_large:{label:'Build · large house',short:'Large house',pts:2,waste:2,cls:'bl',icon:'🏰',
+    cost:'1 R3',gain:'+2 pt',note:'1 R3 (or 2 R1) · +2 pt · +2 waste/turn'},
+  renovate:{label:'Renovate large → small',short:'Renovate',pts:1,waste:0,cls:'rn',icon:'🔧',
+    cost:'1 resource',gain:'+1 pt',note:'1 resource · +1 pt · −1 waste/turn'},
+  remove_waste:{label:'Remove waste (manual)',short:'Remove waste',pts:1,waste:0,cls:'rw',icon:'🧹',
+    cost:'1 R3 each',gain:'+1 pt',note:'1 R3 per waste · +1 pt each'}
+};
+const SYSTEM_CARE=['renovate','remove_waste'];   // long-term / regenerative
+const EXPANSION=['build_small','build_large'];     // immediate-gain
+
+let S=load();
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.workshops)return s;}catch(e){}
+  return {workshops:[],currentId:null,ui:{tab:'home',session:1,round:1,program:''}};
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(S));}
+function uid(){return Math.random().toString(36).slice(2,9);}
+function cur(){return S.workshops.find(w=>w.id===S.currentId)||null;}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+
+/* default new workshop */
+function newWorkshop(d){
+  const teams=(d.teamNames||['Team 1','Team 2','Team 3','Team 4'])
+      .filter(n=>n.trim()).map(n=>({id:uid(),name:n.trim()}));
+  const sessions={};
+  for(let s=1;s<=(d.numSessions||3);s++){
+    sessions[s]={num:s,rounds:{},outcome:{result:'',collapseRound:null,winner:'',notes:''}};
+    for(let r=1;r<=(d.numRounds||6);r++){
+      sessions[s].rounds[r]={num:r,closed:false,
+        board:{green:36,small:0,large:0,waste:0},
+        wasteAdded:0,biodegrade:0,actions:[]};
+    }
+  }
+  return {id:uid(),name:d.name||'Untitled workshop',program:d.program||'',facilitator:d.facilitator||'',
+          date:d.date||new Date().toISOString().slice(0,10),notes:'',
+          numSessions:d.numSessions||3,numRounds:d.numRounds||6,teams,sessions};
+}
+
+/* =====================================================================
+   NAV
+   ===================================================================== */
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-tab]');if(!b)return;go(b.dataset.tab);
+});
+function go(tab){
+  S.ui.tab=tab;save();
+  document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+  document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  render(tab);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function render(tab){
+  ({home:renderHome,learn:renderLearn,observe:renderObserve,insights:renderInsights,data:renderData}[tab])();
+  const w=cur();
+  document.getElementById('ctxChip').textContent=w?`${w.name}${w.program?' · '+w.program:''}`:'No workshop selected';
+}
+
+/* =====================================================================
+   HOME
+   ===================================================================== */
+function renderHome(){
+  const v=document.getElementById('view-home');
+  const list=S.workshops.map(w=>{
+    const st=workshopStats(w);
+    return `<div class="card" style="margin-bottom:.7rem">
+      <div class="row spread">
+        <div>
+          <div class="row" style="gap:.5rem"><strong>${esc(w.name)}</strong>
+            ${w.id===S.currentId?'<span class="tag good">active</span>':''}</div>
+          <small>${esc(w.program||'—')} · ${w.teams.length} teams · ${w.numSessions} sessions · ${st.actions} actions logged · ${esc(w.date)}</small>
+        </div>
+        <div class="row">
+          <button class="btn sm" onclick="selectWorkshop('${w.id}')">Open</button>
+          <button class="btn sm ghost" onclick="delWorkshop('${w.id}')">Delete</button>
+        </div>
+      </div></div>`;
+  }).join('')||`<div class="empty"><div class="big">🏝️</div>No workshops yet. Create one below to start logging play.</div>`;
+
+  v.innerHTML=`
+  <div class="card" style="background:linear-gradient(110deg,#eafaf5,#fff)">
+    <span class="eyebrow">Facilitator workspace</span>
+    <h1>Record how teams play Tipping Point. Read what their actions show.</h1>
+    <p class="muted" style="max-width:800px">Log each team's action while you watch. The tool keeps the running totals: waste on the board, the waste the forest clears each round, and each team's score. It turns the actions into four plain measures: how far ahead teams plan, how much they work together, how big a change they make to their approach, and how often they think before acting. It writes short notes on what the numbers show. It saves everything as a spreadsheet.</p>
+    <div class="legend" style="margin-top:.6rem">
+      <span><i class="sw forest"></i> forest / land</span>
+      <span><i class="sw house"></i> houses</span>
+      <span><i class="sw resource"></i> resources</span>
+      <span><i class="sw waste"></i> waste</span>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h2>➕ New workshop / group</h2>
+      <p class="muted" style="font-size:.85rem">One workshop holds one group of players across all their sessions. The more workshops you record, the clearer the shared patterns become.</p>
+      <label class="field">Workshop name</label>
+      <input type="text" id="nwName" placeholder="e.g. IManHR cohort — Oct 2026">
+      <div class="grid g2" style="gap:.6rem">
+        <div><label class="field">Programme / context</label><input type="text" id="nwProg" placeholder="e.g. Public Health master"></div>
+        <div><label class="field">Facilitator</label><input type="text" id="nwFac" placeholder="your name"></div>
+      </div>
+      <div class="grid g3" style="gap:.6rem">
+        <div><label class="field">Date</label><input type="date" id="nwDate" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div><label class="field">Sessions</label><input type="number" id="nwSess" value="3" min="1" max="6"></div>
+        <div><label class="field">Rounds / session</label><input type="number" id="nwRounds" value="6" min="1" max="12"></div>
+      </div>
+      <label class="field">Team names (one per line)</label>
+      <textarea id="nwTeams" placeholder="Team 1&#10;Team 2&#10;Team 3&#10;Team 4">Team 1
+Team 2
+Team 3
+Team 4</textarea>
+      <button class="btn primary block" style="margin-top:.7rem" onclick="createWorkshop()">Create & start</button>
+    </div>
+
+    <div class="card">
+      <h2>Saved workshops</h2>
+      <div id="wlist">${list}</div>
+      <div class="divider"></div>
+      <div class="row">
+        <button class="btn sm" onclick="go('data')">Import data…</button>
+        <button class="btn sm" onclick="loadDemo()">Load demo data</button>
+      </div>
+      <p class="muted" style="font-size:.78rem;margin-top:.5rem">Everything is stored locally in this browser only. Use <strong>Data → Export</strong> to back it up or move it to another computer.</p>
+    </div>
+  </div>`;
+}
+function createWorkshop(){
+  const name=val('nwName')||'Untitled workshop';
+  const w=newWorkshop({
+    name,program:val('nwProg'),facilitator:val('nwFac'),date:val('nwDate'),
+    numSessions:+val('nwSess')||3,numRounds:+val('nwRounds')||6,
+    teamNames:val('nwTeams').split('\n')
+  });
+  S.workshops.push(w);S.currentId=w.id;S.ui.session=1;S.ui.round=1;save();
+  toast('Workshop created');go('observe');
+}
+function selectWorkshop(id){S.currentId=id;S.ui.session=1;S.ui.round=1;save();toast('Workshop opened');go('observe');}
+function delWorkshop(id){if(!confirm('Delete this workshop and all its data?'))return;
+  S.workshops=S.workshops.filter(w=>w.id!==id);if(S.currentId===id)S.currentId=S.workshops[0]?.id||null;save();renderHome();}
+
+/* =====================================================================
+   LEARN — explain the game (chunked, progressive disclosure)
+   ===================================================================== */
+function renderLearn(){
+  const v=document.getElementById('view-learn');
+  v.innerHTML=`
+  <div class="card">
+    <span class="eyebrow">What players are doing</span>
+    <h1>How the game works</h1>
+    <p style="max-width:820px">An island has <strong>36 forest tiles</strong>. Up to four teams play. The game runs for <strong>six rounds</strong>. Each round, every team takes one action. Teams score points by building houses. Houses also make waste. Free forest soaks up some waste each round. <strong>If houses, resources, and waste fill all 36 tiles before round six, every team loses at once.</strong> A team scores only while the island still has space, so each team depends on keeping the island livable.</p>
+    <div class="legend">
+      <span><i class="sw forest"></i> 36 forest tiles, shared by all teams</span>
+      <span><i class="sw house"></i> small = 1 pt / 1 waste · large = 2 pt / 2 waste</span>
+      <span><i class="sw resource"></i> R1 &amp; R3 tokens, earned by connecting houses</span>
+      <span><i class="sw waste"></i> fills the board and ends the game</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Quick reference — the four actions</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Action</th><th>Costs</th><th>Points</th><th>Waste / turn</th><th>Why use it</th></tr></thead>
+      <tbody>
+        <tr><td>🏠 Build small</td><td>1 R1</td><td>+1</td><td>+1</td><td>cheap, low impact</td></tr>
+        <tr><td>🏰 Build large</td><td><strong>1 R3</strong> (or 2 R1)</td><td>+2</td><td>+2</td><td>most common action — biggest score</td></tr>
+        <tr><td>🔧 Renovate L→S</td><td>1 resource</td><td>+1</td><td>−1</td><td>frees a resource &amp; cuts waste</td></tr>
+        <tr><td>🧹 Remove waste</td><td>1 R3 each</td><td>+1 each</td><td>—</td><td>manual clean-up when forest can't cope</td></tr>
+      </tbody>
+    </table></div>
+    <div class="legend" style="margin-top:.6rem">
+      <span>🌱 <strong>Forest clean-up:</strong> every 2 free forest tiles removes 1 waste, on its own</span>
+      <span>🔗 <strong>Gain resources:</strong> build touching other houses — +1 per house touched</span>
+    </div>
+    <div class="legend" style="margin-top:.35rem">
+      <span>🏆 <strong>Win:</strong> most points · must hold ≥1 resource · leftovers add to score</span>
+      <span>💥 <strong>Everyone loses</strong> if the island fills before round 6</span>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div>
+      <details class="acc" open><summary>🎯 The goal and how a team wins</summary><div class="body">
+        <ul>
+          <li>A team scores the most points over six rounds.</li>
+          <li><strong>Shared loss:</strong> if houses, resources, and waste fill all 36 tiles before round six, every team loses.</li>
+          <li>A team can win only if it holds at least one resource at the end. A team that runs out of resources loses.</li>
+          <li>Resources left at the end add to a team's score.</li>
+        </ul></div></details>
+
+      <details class="acc"><summary>🧩 Components</summary><div class="body">
+        <p><span class="tok resource"><i class="sw resource"></i>Resources</span> two types: <strong>R1</strong> and <strong>R3</strong> (R3 = three R1). Each team <strong>starts with 2 random tokens</strong>; after that the only way in is connecting houses (or a share).</p>
+        <p><span class="tok house"><i class="sw house"></i>Houses</span> two sizes: small (1 pt) and large (2 pt).</p>
+        <p><span class="tok waste"><i class="sw waste"></i>Waste</span> red bins produced by houses each round.</p>
+        <p><span class="tok forest"><i class="sw forest"></i>Forest</span> the 36-hex board; free forest absorbs waste.</p>
+      </div></details>
+
+      <details class="acc"><summary>🔁 A round has three phases</summary><div class="body">
+        <p><strong>1 · Action</strong> — each team does <em>one</em> of: build a house, renovate, or remove waste. Passing is not allowed.</p>
+        <p><strong>2 · Clean-up</strong> — for every <strong>2 free forest tiles</strong>, remove 1 waste. The forest clears this waste on its own. This step skips round 1.</p>
+        <p><strong>3 · Waste</strong> — every house emits waste: small +1, large +2. Add it to the board.</p>
+        <p class="muted" style="font-size:.82rem">The Observe screen runs phases 2 &amp; 3 for you automatically when you close a round.</p>
+      </div></details>
+    </div>
+
+    <div>
+      <details class="acc" open><summary>🛠️ The three actions (and their trade-offs)</summary><div class="body">
+        ${Object.entries(ACTIONS).map(([k,a])=>`<div class="row" style="gap:.6rem;align-items:flex-start;margin-bottom:.5rem">
+          <span style="font-size:1.3rem">${a.icon}</span>
+          <div><strong>${a.label}</strong><br><small>${a.note}</small></div></div>`).join('')}
+        <div class="divider"></div>
+        <p><strong>The catch on resources:</strong> a team gains resources only by building next to existing houses. A new house that touches one house earns 1 resource. A house that touches two earns 2. Each house also places a resource token, so it fills two tiles. Building earns a team resources and uses up its space at the same time.</p>
+      </div></details>
+
+      <details class="acc"><summary>👀 What to watch for while they play</summary><div class="body">
+        <p>The Observe screen lets you mark each of these with one tap. The measures come from these marks.</p>
+        <ul>
+          <li>🤝 <strong>Sharing resources</strong> between teams. The rules never forbid it. No one tells the teams it is allowed.</li>
+          <li>💬 <strong>Talking to another team.</strong></li>
+          <li>🎯 <strong>Naming a shared goal</strong> ("let's all reach round six").</li>
+          <li>🔮 <strong>Thinking ahead</strong> — a team works out what a action will do before making it.</li>
+          <li>⚙️ <strong>How big a change</strong> — a small tweak (small or large house) or a big change (sharing tokens, or changing the goal).</li>
+        </ul>
+      </div></details>
+
+      <details class="acc"><summary>🧠 What the game shows</summary><div class="body">
+        <p>Each measure on the Insights screen comes from one of these:</p>
+        <ul>
+          <li>The island is shared, but each team keeps its own score. One team's building affects every team.</li>
+          <li>Points come fast from building. The cost shows up later, after a delay, as waste.</li>
+          <li>Teams often start out competing. Some begin to work together as the board fills.</li>
+          <li>A team can make a small tweak, such as a house size. A team can make a big change, such as sharing tokens or setting a shared goal.</li>
+          <li>A team can react to the last round. A team can also set an end goal first and work back to it.</li>
+          <li>The forest clears waste on its own, but only while forest tiles stay free.</li>
+        </ul>
+      </div></details>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Two patterns of play</h2>
+    <div class="grid g2">
+      <div class="rec bad" style="border-color:var(--waste);background:var(--waste-soft)">
+        <h4>↻ The losing pattern (often sessions 1–2)</h4>
+        <p>Teams chase points and build fast. Building uses resources and makes waste. Free forest shrinks, so the forest clears less waste. Waste piles up faster than the forest removes it. The board fills and every team loses. The damage shows up late, so teams notice it too slowly.</p>
+      </div>
+      <div class="rec good">
+        <h4>↺ The lasting pattern (often session 3)</h4>
+        <p>Teams get stuck and start to talk. They build trust. They plan where to build and share resources. They renovate and keep forest free. Waste falls and space opens. Scoring continues to round six. Competition fades to a side-game.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* =====================================================================
+   OBSERVE — live logging
+   ===================================================================== */
+let entryDraft=null; // {teamId,action,...}
+function renderObserve(){
+  const v=document.getElementById('view-observe');const w=cur();
+  if(!w){v.innerHTML=noWorkshop();return;}
+  const sNum=S.ui.session,rNum=S.ui.round;
+  const sess=w.sessions[sNum];const rd=sess.rounds[rNum];
+  const board=liveBoard(w,sNum,rNum); // board state entering this round
+  const bg=boardGrid(board);
+
+  // session + round selectors
+  const sessSeg=Object.keys(w.sessions).map(n=>`<button class="${+n===sNum?'active':''}" onclick="setSession(${n})">Session ${n}</button>`).join('');
+  const roundDots=Object.values(sess.rounds).map(r=>{
+    let cls='rdot';if(r.num===rNum)cls+=' active';if(r.closed)cls+=' closed';else if(r.actions.length)cls+=' done';
+    return `<div class="${cls}" onclick="setRound(${r.num})" title="Round ${r.num}">${r.num}</div>`;}).join('');
+
+  const occupied=36-board.green;const pct=Math.round(occupied/36*100);
+  const collapse=board.green<=0;
+
+  // team cards
+  const teams=w.teams.map(t=>{
+    const logged=rd.actions.find(a=>a.teamId===t.id);
+    if(entryDraft&&entryDraft.teamId===t.id&&!rd.closed) return entryPanel(t,w);
+    const held=resourcesHeld(w,sNum,rNum,t.id,true);
+    return `<div class="teamcard ${logged?'logged':''}">
+      <div class="row spread">
+        <strong>${esc(t.name)}</strong>
+        <span class="tok resource"><i class="sw resource"></i>${held} held</span>
+      </div>
+      ${logged?`<div class="row" style="margin-top:.4rem;gap:.4rem">
+          <span class="tag">${ACTIONS[logged.action].icon} ${ACTIONS[logged.action].short}</span>
+          ${flagTags(logged)}
+        </div>
+        <div class="row" style="margin-top:.45rem">
+          ${rd.closed?'':`<button class="btn sm" onclick="editEntry('${t.id}')">Edit</button>`}
+        </div>`
+       :(rd.closed?'<small class="muted">no action logged</small>'
+         :`<button class="btn primary sm block" style="margin-top:.5rem" onclick="startEntry('${t.id}')">＋ Log action</button>`)}
+    </div>`;
+  }).join('');
+
+  const allLogged=w.teams.every(t=>rd.actions.find(a=>a.teamId===t.id));
+
+  v.innerHTML=`
+  <div class="card">
+    <div class="row spread">
+      <div><span class="eyebrow">Observing</span><h1 style="margin:0">${esc(w.name)}</h1></div>
+      <div class="seg">${sessSeg}</div>
+    </div>
+    <div class="divider"></div>
+    <div class="row spread">
+      <div>
+        <small class="muted">Round</small>
+        <div class="rounddots" style="margin-top:.25rem">${roundDots}</div>
+      </div>
+      <div class="row">
+        ${rd.closed?`<span class="tag good">round closed</span>
+            <button class="btn sm" onclick="reopenRound()">Reopen</button>`
+          :`<button class="btn primary" ${allLogged?'':'disabled'} onclick="closeRound()">
+              Close round ${rNum} → add waste &amp; run forest clean-up ▶</button>`}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>Board entering round ${rNum}</h3>
+      <div class="hexgrid" style="margin:.5rem 0">${bg.html}</div>
+      ${bg.over>0?`<span class="tag bad">⚠ ${bg.over} over capacity — island overfull</span>`:''}
+      <div class="legend" style="margin-top:.5rem">
+        <span><i class="sw forest" style="background:var(--forest-soft);box-shadow:inset 0 0 0 1.5px var(--forest)"></i> ${board.green} forest free</span>
+        <span><i class="sw house"></i> ${board.small+board.large} houses (${board.small}S/${board.large}L)</span>
+        <span><i class="sw resource"></i> ${board.resTokens} resources</span>
+        <span><i class="sw waste"></i> ${board.waste} waste</span>
+      </div>
+      <div class="divider"></div>
+      <div class="row spread">
+        <div><div class="metric" style="border:0;padding:0"><div class="v" style="color:${pct>80?'var(--waste)':pct>55?'var(--warn)':'var(--good)'}">${pct}%</div><div class="lab">island occupied</div></div></div>
+        <div style="text-align:right">
+          <small class="muted">next forest clean-up will clear</small><br>
+          <strong>${Math.floor(board.green/2)} waste</strong> <small class="muted">(⌊${board.green}/2⌋)</small>
+        </div>
+      </div>
+      ${collapse?'<div class="rec warn" style="margin-top:.6rem"><h4>⚠ Island is full</h4><p>If this happened before the final round, mark a collective collapse in the session outcome below.</p></div>':''}
+      <p class="muted" style="font-size:.78rem;margin-top:.6rem">The tool works out the board from the actions you logged and the forest clean-up. Set the free-forest count by hand if the real board differs.
+        <button class="btn sm ghost" onclick="overrideGreen()">adjust forest count</button></p>
+    </div>
+
+    <div class="card">
+      <div class="row spread"><h3>Teams this round</h3><small class="muted">${rd.actions.length}/${w.teams.length} logged</small></div>
+      <div class="grid" style="grid-template-columns:1fr;gap:.6rem;margin-top:.5rem">${teams}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Session ${sNum} outcome</h3>
+    <p class="muted" style="font-size:.83rem">Record this after the last round. The change-across-sessions chart uses it.</p>
+    <div class="grid g3" style="gap:.6rem">
+      <div><label class="field">Result</label>
+        <select onchange="setOutcome('result',this.value)">
+          <option value="">—</option>
+          <option ${sess.outcome.result==='survived'?'selected':''} value="survived">Survived to the end</option>
+          <option ${sess.outcome.result==='win'?'selected':''} value="win">Survived — clear winner</option>
+          <option ${sess.outcome.result==='collapse'?'selected':''} value="collapse">Everyone lost (board filled)</option>
+        </select></div>
+      <div><label class="field">Collapse round (if any)</label>
+        <input type="number" min="1" max="${w.numRounds}" value="${sess.outcome.collapseRound||''}" onchange="setOutcome('collapseRound',this.value)"></div>
+      <div><label class="field">Winning team</label>
+        <select onchange="setOutcome('winner',this.value)"><option value="">—</option>
+          ${w.teams.map(t=>`<option ${sess.outcome.winner===t.id?'selected':''} value="${t.id}">${esc(t.name)}</option>`).join('')}</select></div>
+    </div>
+    <label class="field">Debrief notes (facilitator)</label>
+    <textarea onchange="setOutcome('notes',this.value)" placeholder="Memorable moments, quotes, turning points…">${esc(sess.outcome.notes||'')}</textarea>
+  </div>`;
+}
+
+function entryPanel(t,w){
+  const d=entryDraft;const a=d.action;
+  const isBuild=a==='build_small'||a==='build_large';
+  return `<div class="teamcard logged">
+    <div class="row spread"><strong>${esc(t.name)}</strong>
+      <button class="btn sm ghost" onclick="cancelEntry()">✕ cancel</button></div>
+
+    <div class="step">1 · What did they do?</div>
+    <div class="actiongrid">
+      ${Object.entries(ACTIONS).map(([k,act])=>`<button class="act ${act.cls} ${a===k?'sel':''}" onclick="draftSet('action','${k}')">
+        <span>${act.icon} ${act.short}</span><small>${act.cost} · ${act.gain}</small></button>`).join('')}
+    </div>
+    ${a?`
+    ${paidWithToggle(d)}
+
+    <div class="step">2 · Quick context <span class="muted" style="font-weight:400">— only what you saw</span></div>
+    <div class="ctx">
+      ${isBuild?ctxRow('🔗','Houses it touched → resources earned','the only way to gain resources: +1 token per house touched','connections'):''}
+      ${a==='remove_waste'?ctxRow('🧹','Waste tokens removed','+1 point each','wasteRemoved'):''}
+      ${ctxRow('🤝','Gave resources to another team','a cooperation action','sharedGiven')}
+      ${ctxRow('🫱','Received resources from another team','','sharedReceived')}
+    </div>
+
+    <div class="step">3 · Behaviour you observed</div>
+    <div class="row" style="gap:.35rem;margin:.35rem 0">
+      <button class="chip ${d.crosstalk?'on':''}" onclick="draftToggle('crosstalk')">💬 talked to another team</button>
+      <button class="chip ${d.statedGoal?'on':''}" onclick="draftToggle('statedGoal')">🎯 named a shared goal</button>
+      <button class="chip ${d.anticipated?'on':''}" onclick="draftToggle('anticipated')">🔮 thought ahead before acting</button>
+    </div>
+
+    <div class="step">4 · How big a change they made <span class="muted" style="font-weight:400">— optional</span></div>
+    <div class="row" style="gap:.35rem;margin:.35rem 0">
+      <button class="lev shallow ${d.leverage==='shallow'?'on':''}" onclick="draftLev('shallow')">⚙️ small tweak — house size or place</button>
+      <button class="lev deep ${d.leverage==='deep'?'on':''}" onclick="draftLev('deep')">🌱 big change — a rule or the goal</button>
+    </div>
+
+    <p class="muted" style="font-size:.74rem;margin:.3rem 0 0">💡 The token a team pays with is placed on the board. One R3 takes one tile. Two R1 take two tiles. Resources <em>gained</em> = houses touched (above). The only other way in is a share received.</p>
+
+    <input type="text" id="d_notes" placeholder="optional note or quote…" value="${esc(d.notes||'')}" style="margin:.3rem 0">
+    <button class="btn primary block" onclick="saveEntry()">✓ Save ${esc(t.name)}'s turn</button>
+    `:'<p class="muted" style="font-size:.82rem;margin-top:.4rem">Pick the action above to continue.</p>'}
+  </div>`;
+}
+function ctxRow(icon,label,help,field){
+  return `<div class="ctxrow"><div><span style="font-size:1.05rem">${icon}</span> <strong>${label}</strong>${help?`<br><small class="muted">${help}</small>`:''}</div>${stepper(field)}</div>`;
+}
+function stepper(field){const v=entryDraft[field]||0;
+  return `<span class="stepper"><button type="button" onclick="draftStep('${field}',-1)">−</button><span class="val" id="step_${field}">${v}</span><button type="button" onclick="draftStep('${field}',1)">+</button></span>`;}
+
+function startEntry(tid){entryDraft={teamId:tid,action:'',spentR1:0,spentR3:0,connections:0,wasteRemoved:0,sharedGiven:0,sharedReceived:0,crosstalk:false,statedGoal:false,anticipated:false,leverage:null,notes:''};renderObserve();}
+function editEntry(tid){const rd=cur().sessions[S.ui.session].rounds[S.ui.round];const a=rd.actions.find(x=>x.teamId===tid);entryDraft={...a};renderObserve();}
+function cancelEntry(){entryDraft=null;renderObserve();}
+// keep transient inputs (notes) from being lost when we re-render the panel
+function syncDraftInputs(){if(!entryDraft)return;const n=document.getElementById('d_notes');if(n)entryDraft.notes=n.value;}
+// re-render the Observe view without losing scroll position
+function rerenderObserve(){const y=window.scrollY;renderObserve();window.scrollTo(0,y);}
+function draftSet(f,v){syncDraftInputs();entryDraft[f]=v;
+  if(f==='action'){const a=v;
+    if(a==='build_large'){entryDraft.spentR3=1;entryDraft.spentR1=0;}        // most build H2 with R3
+    else if(a==='build_small'||a==='renovate'){entryDraft.spentR1=1;entryDraft.spentR3=0;}
+    else if(a==='remove_waste'){entryDraft.spentR3=1;entryDraft.spentR1=0;if(!entryDraft.wasteRemoved)entryDraft.wasteRemoved=1;}
+    if(!(a==='build_small'||a==='build_large'))entryDraft.connections=0;
+  }
+  rerenderObserve();}
+// which token(s) a team paid with — placed on the board, so the count affects space
+const PAID_OPTIONS={
+  build_small:[['1 R1',1,0,'usual'],['1 R3',0,1,'']],
+  build_large:[['1 R3',0,1,'usual'],['R1 + R1',2,0,'']],
+  renovate:[['1 R1',1,0,'usual'],['1 R3',0,1,'']]
+};
+function paidWithToggle(d){
+  const opts=PAID_OPTIONS[d.action];
+  if(!opts)return '';
+  const sel=(r1,r3)=>(d.spentR1||0)===r1&&(d.spentR3||0)===r3;
+  return `<div class="row" style="gap:.4rem;margin:.3rem 0 .2rem;align-items:center">
+    <small class="muted">paid with</small>
+    ${opts.map(([lab,r1,r3,tag])=>`<button class="lev ${sel(r1,r3)?'deep on':''}" onclick="setPaid(${r1},${r3})">🪵 ${lab}${tag?` <small>(${tag})</small>`:''}</button>`).join('')}
+  </div>`;
+}
+function setPaid(r1,r3){syncDraftInputs();entryDraft.spentR1=r1;entryDraft.spentR3=r3;rerenderObserve();}
+function normalizeSpend(d){
+  if(d.action==='remove_waste'){d.spentR3=Math.max(1,d.wasteRemoved||1);d.spentR1=0;}
+  // builds and renovate keep the "paid with" choice the facilitator picked
+}
+function draftStep(f,n){entryDraft[f]=Math.max(0,(entryDraft[f]||0)+n);
+  // update the number in place — no re-render, so the ledger stays open & scroll/notes are kept
+  const el=document.getElementById('step_'+f);
+  if(el)el.textContent=entryDraft[f];else rerenderObserve();}
+function draftToggle(f){syncDraftInputs();entryDraft[f]=!entryDraft[f];rerenderObserve();}
+function draftLev(v){syncDraftInputs();entryDraft.leverage=entryDraft.leverage===v?null:v;rerenderObserve();}
+function saveEntry(){
+  const w=cur(),rd=w.sessions[S.ui.session].rounds[S.ui.round];
+  entryDraft.notes=val('d_notes');
+  normalizeSpend(entryDraft);
+  const idx=rd.actions.findIndex(a=>a.teamId===entryDraft.teamId);
+  if(idx>=0)rd.actions[idx]=entryDraft;else rd.actions.push(entryDraft);
+  entryDraft=null;save();toast('Saved');renderObserve();
+}
+function setSession(n){S.ui.session=n;S.ui.round=1;entryDraft=null;save();renderObserve();}
+function setRound(n){S.ui.round=n;entryDraft=null;save();renderObserve();}
+function setOutcome(f,v){const o=cur().sessions[S.ui.session].outcome;o[f]=(f==='collapseRound')?(+v||null):v;save();}
+function closeRound(){const rd=cur().sessions[S.ui.session].rounds[S.ui.round];rd.closed=true;entryDraft=null;save();
+  toast('Round closed — waste added and forest clean-up applied');
+  if(S.ui.round<cur().numRounds)S.ui.round++;renderObserve();}
+function reopenRound(){cur().sessions[S.ui.session].rounds[S.ui.round].closed=false;save();renderObserve();}
+function overrideGreen(){
+  const w=cur(),b=liveBoard(w,S.ui.session,S.ui.round);
+  const n=prompt('Set free-forest hexes entering this round (auto = '+b.green+'):',b.green);
+  if(n===null)return;cur().sessions[S.ui.session].rounds[S.ui.round].greenOverride=Math.max(0,Math.min(36,+n||0));save();renderObserve();
+}
+
+/* board simulation: state ENTERING round r of session s */
+function liveBoard(w,s,r){
+  let small=0,large=0,waste=0,resTokens=0;
+  for(let rr=1;rr<r;rr++){
+    const rd=w.sessions[s].rounds[rr];
+    // apply actions
+    rd.actions.forEach(a=>{
+      const placed=(a.spentR1||0)+(a.spentR3||0); // tokens paid with go on the board
+      if(a.action==='build_small'){small++;resTokens+=placed;}
+      else if(a.action==='build_large'){large++;resTokens+=placed;}
+      else if(a.action==='renovate'){if(large>0){large--;small++;}resTokens=Math.max(0,resTokens-1);} // renovating frees 1 token
+      else if(a.action==='remove_waste'){waste=Math.max(0,waste-(a.wasteRemoved||0));}
+    });
+    let green=36-(small+large+resTokens+waste);
+    // biodegrade (not round 1)
+    if(rr>1){const bio=Math.floor(Math.max(0,green)/2);waste=Math.max(0,waste-bio);}
+    // waste phase
+    waste+=small*1+large*2;
+  }
+  let green=36-(small+large+resTokens+waste);
+  const rd=w.sessions[s].rounds[r];
+  if(rd.greenOverride!=null)green=rd.greenOverride;
+  return {green:Math.max(0,green),small,large,waste:Math.max(0,waste),resTokens};
+}
+/* resources a team holds entering (or, if incl current, after) a round */
+function resourcesHeld(w,s,r,tid,beforeCurrent){
+  let h=2; // each team starts with 2 random resource tokens
+  for(let rr=1;rr<=r;rr++){
+    if(rr===r&&beforeCurrent)break;
+    const a=w.sessions[s].rounds[rr].actions.find(x=>x.teamId===tid);if(!a)continue;
+    // gained: ONLY via houses touched (connections) or a share received
+    h+=(a.connections||0)+(a.sharedReceived||0);
+    // spent: tokens used on the action + any tokens given away
+    h-=(a.spentR1||0)+(a.spentR3||0)+(a.sharedGiven||0);
+  }
+  return Math.max(0,h);
+}
+function flagTags(a){let s='';if(a.sharedGiven||a.sharedReceived)s+='<span class="tag good">🤝</span>';if(a.crosstalk)s+='<span class="tag">💬</span>';if(a.statedGoal)s+='<span class="tag">🎯</span>';if(a.anticipated)s+='<span class="tag">🔮</span>';if(a.leverage==='deep')s+='<span class="tag good">🌱 big change</span>';if(a.leverage==='shallow')s+='<span class="tag warn">⚙️ small tweak</span>';return s;}
+function barSeg(n,c){if(n<=0)return'';return `<div style="flex:${n};background:${c}"></div>`;}
+function boardGrid(b){
+  const map={lg:'var(--house)',sm:'#5b9bd5',res:'var(--resource)',waste:'var(--waste)'};
+  let arr=[];const push=(n,k)=>{for(let i=0;i<n;i++)arr.push(k);};
+  push(b.large,'lg');push(b.small,'sm');push(b.resTokens,'res');push(b.waste,'waste');
+  const over=Math.max(0,arr.length-36);
+  arr=arr.slice(0,36);
+  const free=36-arr.length;for(let i=0;i<free;i++)arr.push('free');
+  const html=arr.map(k=>k==='free'?'<div class="cell free"></div>':`<div class="cell" style="background:${map[k]}"></div>`).join('');
+  return {html,over,free};
+}
+
+/* =====================================================================
+   METRICS
+   ===================================================================== */
+function allActions(w){const out=[];Object.values(w.sessions).forEach(s=>Object.values(s.rounds).forEach(r=>r.actions.forEach(a=>out.push({...a,session:s.num,round:r.num}))));return out;}
+function workshopStats(w){return {actions:allActions(w).length};}
+
+/* indicators for a set of actions */
+function indicators(acts){
+  const n=acts.length||1;
+  const care=acts.filter(a=>SYSTEM_CARE.includes(a.action)).length;
+  const exp=acts.filter(a=>EXPANSION.includes(a.action)).length;
+  const coopEvents=acts.reduce((s,a)=>s+((a.sharedGiven||0)+(a.sharedReceived||0)>0?1:0)+(a.crosstalk?1:0)+(a.statedGoal?1:0),0);
+  const lev=acts.filter(a=>a.leverage);const deep=acts.filter(a=>a.leverage==='deep').length;
+  const builds=acts.filter(a=>EXPANSION.includes(a.action));
+  const conn=builds.reduce((s,a)=>s+(a.connections||0),0);
+  return {
+    n:acts.length,
+    TOI: (care+exp)?care/(care+exp):0,                 // temporal orientation (regenerative share)
+    CI: acts.length?coopEvents/(acts.length*3):0,       // cooperation intensity (0..1)
+    LDR: lev.length?deep/lev.length:null,               // leverage depth ratio
+    ANT: acts.length?acts.filter(a=>a.anticipated).length/acts.length:0,
+    shares: acts.reduce((s,a)=>s+(a.sharedGiven||0)+(a.sharedReceived||0),0),
+    connRatio: builds.length?conn/builds.length:0,
+    care,exp,deep,levN:lev.length
+  };
+}
+/* per-team pattern + systems-play score, sorted strongest→weakest */
+function teamDiagnostics(w,acts){
+  return w.teams.map(t=>{
+    const ta=acts.filter(a=>a.teamId===t.id);
+    const ind=indicators(ta);
+    const expRatio=(ind.care+ind.exp)?ind.exp/(ind.care+ind.exp):0;
+    const score=ind.TOI*0.4+ind.CI*0.4+(ind.LDR||0)*0.1+ind.ANT*0.1;
+    let pattern,ptag;
+    if(ta.length<3){pattern='too few actions';ptag='';}
+    else if(ind.CI>=0.25&&ind.TOI>=0.35){pattern='collaborative · long-term';ptag='good';}
+    else if(ind.CI<0.12&&expRatio>0.7){pattern='competitive · short-term';ptag='bad';}
+    else {pattern='developing';ptag='warn';}
+    return {team:t,n:ta.length,ind,expRatio,score,pattern,ptag,
+            pts:ta.reduce((s,a)=>s+actionPoints(a),0)};
+  }).sort((a,b)=>b.score-a.score);
+}
+/* coverage: how much the facilitator actually tagged (so absence isn't misread as zero) */
+function coverage(acts){
+  const n=acts.length||1;
+  return {
+    lev: acts.filter(a=>a.leverage).length/n,
+    beh: acts.filter(a=>a.leverage||a.crosstalk||a.statedGoal||a.anticipated||a.sharedGiven||a.sharedReceived).length/n
+  };
+}
+function sessionMetrics(w,sNum){
+  const acts=allActions(w).filter(a=>a.session===sNum);
+  const ind=indicators(acts);
+  // board health: peak waste & end occupancy
+  let peakWaste=0,endOcc=0;
+  for(let r=1;r<=w.numRounds;r++){const b=liveBoard(w,sNum,r);peakWaste=Math.max(peakWaste,b.waste);endOcc=36-b.green;}
+  const o=w.sessions[sNum].outcome;
+  return {...ind,peakWaste,endOcc:Math.round(endOcc/36*100),outcome:o.result,collapseRound:o.collapseRound};
+}
+
+/* =====================================================================
+   INSIGHTS
+   ===================================================================== */
+function renderInsights(){
+  const v=document.getElementById('view-insights');const w=cur();
+  if(!w){v.innerHTML=noWorkshop();return;}
+  const acts=allActions(w);
+  if(!acts.length){v.innerHTML=`<div class="card"><div class="empty"><div class="big">📊</div>No actions logged yet. Open <a href="#" onclick="go('observe');return false">Observe play</a> and log a few actions. Results appear here at once.</div></div>`;return;}
+
+  const sessNums=Object.keys(w.sessions).map(Number).filter(s=>allActions(w).some(a=>a.session===s));
+  const mAll=indicators(acts);
+  const cov=coverage(acts);
+  const sm=sessNums.map(s=>({s,...sessionMetrics(w,s)}));
+  const first=sm[0],last=sm[sm.length-1];
+
+  // headline metrics with session-1→last delta
+  const cards=[
+    {k:'TOI',lab:'Protecting the island',v:pct(mAll.TOI),d:delta(first?.TOI,last?.TOI,true),
+     help:'Share of actions that protect the island (renovate or remove waste) out of all actions. Building for points is the other kind of action. The share rises as teams start to keep the island livable.'},
+    {k:'CI',lab:'Working together',v:pct(mAll.CI),d:delta(first?.CI,last?.CI,true),
+     help:'How often teams act together. Counts sharing tokens, talking across teams, and naming a shared goal, divided by the number of actions. The number rises as teams begin to coordinate.'},
+    {k:'LDR',lab:'Big changes',v:mAll.LDR==null?'—':pct(mAll.LDR),d:delta(first?.LDR,last?.LDR,true),
+     help:'Of the actions you marked, the share where a team changed a rule or the goal (a big change). The rest were small tweaks, such as choosing a small or large house.'},
+    {k:'ANT',lab:'Thinking ahead',v:pct(mAll.ANT),d:delta(first?.ANT,last?.ANT,true),
+     help:'Share of actions where a team worked out the effect of a action before making it. The number rises as teams plan their actions.'},
+  ];
+  const metricRow=cards.map(c=>`<div class="metric">
+      <div class="help" tabindex="0" role="button" aria-label="${esc(c.lab)} definition">i<span class="tip">${esc(c.help)}</span></div>
+      <div class="v">${c.v}</div><div class="lab">${c.lab}</div>
+      ${c.d?`<div class="delta ${c.d.up?'up':'down'}">${c.d.up?'▲':'▼'} ${c.d.txt} first to last session</div>`:''}
+    </div>`).join('');
+
+  // learning-curve line charts across sessions
+  const lc=`
+    ${lineChart('Protecting the island, by session',sm.map(x=>({x:'S'+x.s,y:x.TOI})),'%','var(--forest)')}
+    ${lineChart('Working together, by session',sm.map(x=>({x:'S'+x.s,y:x.CI})),'%','var(--accent)')}
+    ${lineChart('Thinking ahead, by session',sm.map(x=>({x:'S'+x.s,y:x.ANT})),'%','var(--house)')}
+  `;
+
+  // action mix
+  const mix=Object.keys(ACTIONS).map(k=>({k,n:acts.filter(a=>a.action===k).length}));
+
+  // board health (last session with data)
+  const lastSess=sessNums[sessNums.length-1];
+  const wasteSeries=[];for(let r=1;r<=w.numRounds;r++){const b=liveBoard(w,lastSess,r);wasteSeries.push({x:'R'+r,y:b.waste,green:b.green});}
+
+  // per-team table (from diagnostics: sorted strongest → weakest, with a pattern tag)
+  const diag=teamDiagnostics(w,acts);
+  const teamRows=diag.map(d=>{
+    const tagcls=d.ptag==='good'?'good':d.ptag==='bad'?'bad':'warn';
+    return `<tr><td><strong>${esc(d.team.name)}</strong></td><td>${d.n}</td><td>${d.pts}</td>
+      <td>${pct(d.ind.TOI)}</td><td>${pct(d.ind.CI)}</td><td>${d.ind.shares}</td>
+      <td>${d.ind.connRatio.toFixed(1)}</td><td>${d.ind.levN?pct(d.ind.LDR):'—'}</td>
+      <td>${d.ptag?`<span class="tag ${tagcls}">${d.pattern}</span>`:'<span class="muted">—</span>'}</td></tr>`;}).join('');
+
+  const recs=recommendations(w,sm,mAll);
+
+  v.innerHTML=`
+  <div class="card" style="position:relative;z-index:30;overflow:visible">
+    <div class="row spread"><div><span class="eyebrow">Insights</span><h1 style="margin:0">${esc(w.name)}</h1></div>
+      <small class="muted">${acts.length} actions · ${w.teams.length} teams · ${sessNums.length} sessions with data</small></div>
+    <p class="muted" style="font-size:.84rem;margin-top:.5rem">Tap the <strong>i</strong> on any measure to read what it means. The small arrow compares the first session with the last, so it shows how a group changed.</p>
+    <div class="row" style="gap:.5rem;margin-top:.55rem;flex-wrap:wrap">
+      <span class="tag ${cov.lev<0.5?'warn':'good'}">⚙️ change-size marked on ${pct(cov.lev)} of actions</span>
+      <span class="tag ${cov.beh<0.5?'warn':'good'}">🔭 behaviour marked on ${pct(cov.beh)} of actions</span>
+    </div>
+    ${(cov.lev<0.5||cov.beh<0.5)?`<p class="muted" style="font-size:.78rem;margin:.45rem 0 0">⚠ You marked few actions. The tool counts an unmarked action as “not seen”, so <strong>big changes and thinking ahead can read lower than what really happened</strong>. Mark more actions during play to sharpen the numbers.</p>`:''}
+    <div class="grid g4" style="margin-top:.8rem">${metricRow}</div>
+  </div>
+
+  <div class="card">
+    <h2>🌱 What is happening, and what to work on</h2>
+    <p class="muted" style="font-size:.84rem">The tool writes these from the patterns in your data. Use them as questions for the debrief and goals for the next session.</p>
+    ${recs}
+  </div>
+
+  <div class="grid g2">
+    <div class="card"><h3>Change across sessions</h3>
+      <p class="muted" style="font-size:.8rem">The game aims to action three numbers up session by session: protecting the island, working together, and thinking ahead.</p>
+      ${sm.length>1?lc:'<p class="muted">Log a second session to see the change.</p>'}
+    </div>
+    <div class="card"><h3>Waste on the board, last session, round by round</h3>
+      <p class="muted" style="font-size:.8rem">How high waste rose, and how close the island came to filling. Highest waste = ${last.peakWaste}. Tiles filled at the end = ${last.endOcc}%.</p>
+      ${barChart(wasteSeries.map(p=>({x:p.x,y:p.y})),'var(--waste)')}
+      <div class="legend" style="margin-top:.4rem"><span><i class="sw waste"></i> waste left on the board after each round</span></div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card"><h3>Actions teams made</h3>
+      ${barChart(mix.map(m=>({x:ACTIONS[m.k].short,y:m.n})),'var(--house)')}
+      <div class="legend" style="margin-top:.4rem">
+        <span class="tag good">protect the island: ${mAll.care}</span>
+        <span class="tag warn">build for points: ${mAll.exp}</span>
+      </div>
+    </div>
+    <div class="card"><h3>Each team</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Team</th><th>Actions</th><th>Pts</th><th>Protect</th><th>Together</th><th>Shares</th><th>Touched/build</th><th>Big%</th><th>Pattern</th></tr></thead>
+        <tbody>${teamRows}</tbody></table></div>
+      <p class="muted" style="font-size:.76rem;margin-top:.4rem">Sorted from the team that worked together and planned most, down to the team that did so least. Pts = points scored. Touched/build = houses each build touched, on average (how a team earns resources). Big% = share of marked actions that were a big change. Pattern blends working together and protecting the island.</p>
+    </div>
+  </div>`;
+}
+
+function actionPoints(a){if(a.action==='remove_waste')return (a.wasteRemoved||0);return ACTIONS[a.action]?.pts||0;}
+
+/* recommendation engine — pattern → interpretation → debrief lever */
+function recommendations(w,sm,mAll){
+  const R=[];
+  const last=sm[sm.length-1]||{};
+  const first=sm[0]||{};
+  // team to watch — name the specific lagging team and a pairing with the exemplar
+  const acts=allActions(w);
+  const ranked=teamDiagnostics(w,acts).filter(d=>d.n>=3);
+  if(ranked.length>=2){
+    const lead=ranked[0], watch=ranked[ranked.length-1];
+    if(watch.score < lead.score-0.08){
+      R.push(['warn',`Team to watch: ${esc(watch.team.name)}`,
+        `${esc(watch.team.name)} has the lowest score for working together and planning ahead so far. ${esc(lead.team.name)} has the highest. Seat the two teams near each other next round. In the debrief, ask ${esc(lead.team.name)} to say out loud how they decided, so the other teams hear it.`]);
+    }
+  }
+  // competing on a shared board
+  if(mAll.CI<0.12 && mAll.TOI<0.25){
+    R.push(['warn','Teams are competing on a shared board','Teams build a lot for points. They share little and rarely name a shared goal. In the debrief, point out that the rules never forbid sharing. Ask the room: "what goal do all the teams share?"']);
+  }
+  // small tweaks only
+  if(mAll.levN>=3 && (mAll.LDR??1)<0.34){
+    R.push(['warn','Teams make small tweaks','Most marked actions change a house size or place. Few change a rule or the goal. In the debrief, ask each team to name the result it wants at round six, then work back from there. Point to bigger actions: pool resources, or agree a shared goal.']);
+  }
+  // acts before planning
+  if(mAll.ANT<0.2){
+    R.push(['warn','Teams act before working out the result','Few actions show a team thinking ahead. Before each action, ask the team to say one sentence about what the action will do. This builds the habit of planning.']);
+  }
+  // builds apart, runs low on resources
+  if(mAll.connRatio<0.6 && mAll.exp>=4){
+    R.push(['warn','Teams build apart and run low on resources','Houses sit on their own, so teams earn few resources. A team earns resources only by building next to other houses. Point this out in the debrief.']);
+  }
+  // protecting more
+  if(sm.length>1){
+    if(last.TOI>first.TOI+0.1) R.push(['good','Teams are protecting the island more','Actions that protect the island rose from '+pct(first.TOI)+' to '+pct(last.TOI)+' across sessions. Name this in the debrief so the teams own the change.']);
+    if(last.CI>first.CI+0.08) R.push(['good','Teams are working together more','Cross-team actions rose across sessions. Ask the teams: "what made you start working together, and why so late?"']);
+  }
+  // board filled
+  const collapses=sm.filter(x=>x.outcome==='collapse');
+  if(collapses.length){
+    R.push(['warn',`The board filled in ${collapses.length} session(s)`,'A shared loss is useful. Teams often discuss a hard topic more calmly once they have all lost together. In the debrief, treat the loss as shared data. Then plan the next attempt.']);
+  }
+  // strong state
+  if(!R.length || (mAll.CI>0.25&&mAll.TOI>0.4)){
+    R.unshift(['good','Teams work together and plan ahead','Working together and protecting the island are both high. Push further. Ask teams to weigh the cost of each build, the point they discuss least. Ask them to name the changes that helped.']);
+  }
+  return R.slice(0,6).map(([c,h,p])=>`<div class="rec ${c}"><h4>${h}</h4><p>${p}</p></div>`).join('');
+}
+
+/* =====================================================================
+   CHARTS (inline SVG, no libraries)
+   ===================================================================== */
+function barChart(data,color){
+  if(!data.length)return'<p class="muted">No data.</p>';
+  const max=Math.max(1,...data.map(d=>d.y));
+  const n=data.length, slot=74, W=Math.max(300,n*slot), H=184, top=22, bot=48, plotH=H-top-bot, bw=Math.min(46,slot*0.5);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:200px">
+    ${data.map((d,i)=>{const cx=(i+.5)*(W/n);const h=(d.y/max)*plotH;const y=top+plotH-h;
+      const words=String(d.x).split(' ');
+      return `<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" rx="5" fill="${color}"/>
+        <text x="${cx}" y="${y-6}" text-anchor="middle" font-size="12" font-weight="700" fill="#16282f">${d.y}</text>
+        <text x="${cx}" y="${top+plotH+16}" text-anchor="middle" font-size="11" fill="#5d7079">${words.map((wd,j)=>`<tspan x="${cx}" dy="${j===0?0:12}">${esc(wd)}</tspan>`).join('')}</text>`;}).join('')}
+  </svg>`;
+}
+function lineChart(title,data,unit,color){
+  if(!data.length)return'';
+  const W=300,H=120,pad=26;const max=unit==='%'?1:Math.max(1,...data.map(d=>d.y));
+  const xs=i=>pad+(data.length===1?(W-2*pad)/2:i*((W-2*pad)/(data.length-1)));
+  const ys=y=>H-pad-(y/max)*(H-2*pad);
+  const pts=data.map((d,i)=>`${xs(i)},${ys(d.y)}`).join(' ');
+  return `<div style="margin-bottom:.7rem"><small class="muted" style="font-weight:600">${title}</small>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:130px">
+      <line x1="${pad}" y1="${H-pad}" x2="${W-6}" y2="${H-pad}" stroke="#e2e8ea"/>
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${data.map((d,i)=>`<circle cx="${xs(i)}" cy="${ys(d.y)}" r="4" fill="${color}"/>
+        <text x="${xs(i)}" y="${ys(d.y)-8}" text-anchor="middle" font-size="10" font-weight="700" fill="#16282f">${unit==='%'?pct(d.y):d.y}</text>
+        <text x="${xs(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#5d7079">${esc(d.x)}</text>`).join('')}
+    </svg></div>`;
+}
+
+/* =====================================================================
+   DATA / EXPORT
+   ===================================================================== */
+function renderData(){
+  const v=document.getElementById('view-data');const w=cur();
+  const rows=w?allActions(w):[];
+  const table=w&&rows.length?`<div class="scroll"><table>
+    <thead><tr><th>S</th><th>R</th><th>Team</th><th>Action</th><th>Pts</th><th>Spent R1</th><th>Spent R3</th><th>Touched→gain</th><th>WasteRm</th><th>Share+/−</th><th>Marks</th><th>Change</th></tr></thead>
+    <tbody>${rows.map(a=>{const t=w.teams.find(x=>x.id===a.teamId);return `<tr>
+      <td>${a.session}</td><td>${a.round}</td><td>${esc(t?.name||'?')}</td>
+      <td>${ACTIONS[a.action].short}</td><td>${actionPoints(a)}</td>
+      <td>${a.spentR1||0}</td><td>${a.spentR3||0}</td>
+      <td>${a.connections||0}</td><td>${a.wasteRemoved||0}</td><td>+${a.sharedGiven||0}/−${a.sharedReceived||0}</td>
+      <td>${flagTags(a)||'—'}</td><td>${a.leverage==='deep'?'big':a.leverage==='shallow'?'small':'—'}</td></tr>`;}).join('')}</tbody></table></div>`
+    :'<p class="muted">No actions logged yet.</p>';
+
+  v.innerHTML=`
+  <div class="card">
+    <span class="eyebrow">Data &amp; export</span>
+    <h1>Your data, ready for statistics</h1>
+    <p class="muted" style="max-width:760px">Export is <strong>tidy</strong> — one row per team-turn — so it drops straight into R, SPSS, Python or a spreadsheet. Each workshop adds observations; as cohorts accumulate, between-group comparisons and session-1-vs-3 paired tests become generalisable.</p>
+    <div class="row" style="margin-top:.6rem">
+      <button class="btn primary" onclick="exportCSV()" ${w?'':'disabled'}>⬇ Actions CSV</button>
+      <button class="btn" onclick="exportSummaryCSV()" ${w?'':'disabled'}>⬇ Session-summary CSV</button>
+      <button class="btn" onclick="exportJSON()">⬇ Full backup (JSON)</button>
+      <label class="btn" style="position:relative;overflow:hidden">⬆ Import JSON
+        <input type="file" accept=".json" onchange="importJSON(event)" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+    </div>
+  </div>
+  ${w?`<div class="card"><div class="row spread"><h3>${esc(w.name)} — raw log</h3><small class="muted">${rows.length} rows</small></div>${table}</div>`:'<div class="card">'+noWorkshop()+'</div>'}
+  <div class="card">
+    <h3>What each field and number means</h3>
+    <div class="scroll"><table><thead><tr><th>Field or number</th><th>How it is worked out</th><th>What it shows</th></tr></thead><tbody>
+      <tr><td>action</td><td>build small, build large, renovate, or remove waste</td><td>the action a team made</td></tr>
+      <tr><td>housesTouched / resGained</td><td>houses the new house touched (each earns 1 resource)</td><td>the resources a team earned that action</td></tr>
+      <tr><td>Protecting the island</td><td>(renovate + remove waste) ÷ all actions</td><td>how often a team keeps the island livable</td></tr>
+      <tr><td>Working together</td><td>(shares + cross-team talk + shared-goal marks) ÷ (actions × 3)</td><td>how often teams act together</td></tr>
+      <tr><td>Big changes</td><td>big-change marks ÷ all marked actions</td><td>how often a team changes a rule or the goal</td></tr>
+      <tr><td>Thinking ahead</td><td>think-ahead marks ÷ all actions</td><td>how often a team plans before moving</td></tr>
+      <tr><td>Touched per build</td><td>houses touched ÷ number of builds</td><td>how a team earns its resources</td></tr>
+      <tr><td>Highest waste / tiles filled</td><td>most waste on the board / share of 36 tiles used</td><td>how close the island came to filling</td></tr>
+    </tbody></table></div>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--waste)">Danger zone</h3>
+    <button class="btn ghost" onclick="wipeAll()">Erase ALL local data</button>
+  </div>`;
+}
+function csvCell(s){s=String(s??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function download(name,text,type){const b=new Blob([text],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+function exportCSV(){const w=cur();if(!w)return;
+  const head=['workshop','program','facilitator','date','session','round','team','action','points','spentR1','spentR3','housesTouched','resGained','wasteRemoved','sharedGiven','sharedReceived','crosstalk','statedGoal','anticipated','leverage','notes'];
+  const lines=[head.join(',')];
+  allActions(w).forEach(a=>{const t=w.teams.find(x=>x.id===a.teamId);
+    lines.push([w.name,w.program,w.facilitator,w.date,a.session,a.round,t?.name||'',a.action,actionPoints(a),a.spentR1||0,a.spentR3||0,a.connections||0,a.connections||0,a.wasteRemoved||0,a.sharedGiven||0,a.sharedReceived||0,a.crosstalk?1:0,a.statedGoal?1:0,a.anticipated?1:0,a.leverage||'',a.notes||''].map(csvCell).join(','));});
+  download(slug(w.name)+'_actions.csv',lines.join('\n'),'text/csv');toast('Actions CSV exported');
+}
+function exportSummaryCSV(){const w=cur();if(!w)return;
+  const head=['workshop','program','session','n_actions','TOI','CI','LDR','ANT','peak_waste','end_occupancy_pct','outcome','collapse_round'];
+  const lines=[head.join(',')];
+  Object.keys(w.sessions).map(Number).forEach(s=>{const m=sessionMetrics(w,s);
+    lines.push([w.name,w.program,s,m.n,r3(m.TOI),r3(m.CI),m.LDR==null?'':r3(m.LDR),r3(m.ANT),m.peakWaste,m.endOcc,m.outcome||'',m.collapseRound||''].map(csvCell).join(','));});
+  download(slug(w.name)+'_session_summary.csv',lines.join('\n'),'text/csv');toast('Summary CSV exported');
+}
+function exportJSON(){download('tipping_point_backup.json',JSON.stringify(S,null,2),'application/json');toast('Backup exported');}
+function importJSON(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{const d=JSON.parse(rd.result);
+    if(d.workshops){if(confirm('Replace all current data with this file?')){S=d;}}
+    else if(d.id&&d.sessions){S.workshops.push(d);S.currentId=d.id;} // single workshop
+    save();toast('Imported');go('home');
+  }catch(err){alert('Could not read file: '+err.message);}};rd.readAsText(f);}
+function wipeAll(){if(confirm('Erase ALL workshops permanently?')){localStorage.removeItem(KEY);S=load();go('home');}}
+
+/* =====================================================================
+   DEMO DATA — illustrates the session 1→3 learning arc
+   ===================================================================== */
+function loadDemo(){
+  const w=newWorkshop({name:'Demo group — example data',program:'Demo',facilitator:'You',numSessions:3,numRounds:6});
+  const T=w.teams.map(t=>t.id);
+  const mk=(teamId,action,o={})=>({teamId,action,spentR1:(action==='build_small'||action==='renovate')?1:0,spentR3:(action==='build_large'||action==='remove_waste')?1:0,connections:0,wasteRemoved:action==='remove_waste'?1:0,sharedGiven:0,sharedReceived:0,crosstalk:false,statedGoal:false,anticipated:false,leverage:null,...o});
+  // session 1: aggressive, individualistic
+  for(let r=1;r<=6;r++)T.forEach((id,i)=>{w.sessions[1].rounds[r].actions.push(mk(id,r<5?'build_large':'build_small',{leverage:'shallow',connections:i%2}));w.sessions[1].rounds[r].closed=true;});
+  w.sessions[1].outcome={result:'collapse',collapseRound:5,winner:'',notes:'Built fast, board saturated by R5.'};
+  // session 2: constraints recognised, some sharing
+  for(let r=1;r<=6;r++)T.forEach((id,i)=>{const a=r<=2?'build_large':(r===3?'build_small':(r===4?'renovate':'remove_waste'));w.sessions[2].rounds[r].actions.push(mk(id,a,{leverage:r>3?'deep':'shallow',crosstalk:r>=3,sharedReceived:r>=4&&i===0?1:0,sharedGiven:r>=4&&i===1?1:0,connections:1}));w.sessions[2].rounds[r].closed=true;});
+  w.sessions[2].outcome={result:'survived',collapseRound:null,winner:T[0],notes:'Started sharing resources mid-game.'};
+  // session 3: collective, anticipatory
+  for(let r=1;r<=6;r++)T.forEach((id,i)=>{const a=r<=2?'build_small':(r===3?'build_large':(r===4?'renovate':'remove_waste'));w.sessions[3].rounds[r].actions.push(mk(id,a,{leverage:'deep',crosstalk:true,statedGoal:r<=2,anticipated:r>=2,sharedReceived:i===0?1:0,sharedGiven:i===1?1:0,connections:2}));w.sessions[3].rounds[r].closed=true;});
+  w.sessions[3].outcome={result:'win',collapseRound:null,winner:T[2],notes:'Set shared goal from round 1, all survived.'};
+  S.workshops.push(w);S.currentId=w.id;save();toast('Demo loaded');go('insights');
+}
+
+/* =====================================================================
+   HELPERS
+   ===================================================================== */
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function val(id){return (document.getElementById(id)?.value||'').trim();}
+function pct(x){return Math.round((x||0)*100)+'%';}
+function r3(x){return x==null?'':Math.round(x*1000)/1000;}
+function delta(a,b,higherBetter){if(a==null||b==null)return null;const diff=b-a;if(Math.abs(diff)<0.005)return null;const up=diff>0;return {up:higherBetter?up:!up,txt:(diff>0?'+':'')+Math.round(diff*100)+'pp'};}
+function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'workshop';}
+function noWorkshop(){return `<div class="empty"><div class="big">🏝️</div>No workshop selected. <a href="#" onclick="go('home');return false">Create or open one</a> to begin.</div>`;}
+
+/* boot */
+go(S.ui.tab||'home');
+</script>
+</body>
+</html>
