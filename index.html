@@ -51,6 +51,7 @@ section.view.active{display:block}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.1rem 1.2rem;box-shadow:var(--shadow);margin-bottom:1.1rem}
 .grid{display:grid;gap:1.1rem}
+.grid>*{min-width:0}              /* let .scroll tables/charts clip instead of stretching the page */
 .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
@@ -79,7 +80,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 textarea{resize:vertical;min-height:54px}
 
 /* steppers */
-.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex-shrink:0}
 .stepper button{border:0;background:#f6f8f8;width:30px;height:30px;font-size:1.1rem;font-weight:700;color:var(--accent)}
 .stepper button:hover{background:var(--accent-soft)}
 .stepper .val{min-width:30px;text-align:center;font-weight:700;font-size:.95rem}
@@ -141,6 +142,7 @@ textarea{resize:vertical;min-height:54px}
 .step{font-size:.78rem;font-weight:700;color:var(--accent);margin:.7rem 0 .15rem}
 .ctx{display:flex;flex-direction:column;gap:.4rem;margin:.3rem 0}
 .ctxrow{display:flex;align-items:center;justify-content:space-between;gap:.6rem;border:1px solid var(--line);border-radius:var(--radius-sm);padding:.45rem .6rem}
+.ctxrow>div:first-child{min-width:0}
 .ctxrow strong{font-size:.86rem;font-weight:600}
 
 /* ---------- Metric cards ---------- */
@@ -182,7 +184,19 @@ tbody tr:hover{background:#fafcfb}
 .appfoot a{color:var(--accent);font-weight:600;text-decoration:none}
 .appfoot a:hover{text-decoration:underline}
 .appfoot .dotsep{margin:0 .4rem;opacity:.5}
-@media(max-width:560px){.actiongrid{grid-template-columns:1fr}.bar{padding:.6rem .8rem}}
+@media(max-width:560px){
+  .bar{padding:.55rem .7rem;gap:.5rem}
+  .brand{font-size:.95rem}
+  .context-chip{display:none}            /* the workshop name already shows on each screen */
+  nav.tabs{width:100%;margin-left:0;justify-content:center;gap:.35rem}
+  nav.tabs button{padding:.5rem .75rem;font-size:.82rem;white-space:nowrap}
+  main{padding:.9rem .7rem 3rem}
+  .card{padding:.9rem .85rem}
+  .act{padding:.6rem .55rem;min-height:52px}    /* keep build buttons 2-up but tappable */
+  .stepper button{width:38px;height:38px}        /* bigger +/- targets for thumbs */
+  .chip,.lev{padding:.45rem .7rem}                /* easier taps */
+  .ctxrow{padding:.55rem .6rem}
+}
 </style>
 </head>
 <body>
@@ -193,8 +207,8 @@ tbody tr:hover{background:#fafcfb}
     <span class="context-chip" id="ctxChip">No workshop selected</span>
     <nav class="tabs" id="tabs">
       <button data-tab="home" class="active">🏠 Home</button>
-      <button data-tab="learn">📖 Explain the game</button>
-      <button data-tab="observe">🔭 Observe play</button>
+      <button data-tab="learn">📖 Explain</button>
+      <button data-tab="observe">🔭 Observe</button>
       <button data-tab="insights">📊 Insights</button>
       <button data-tab="data">🗂️ Data</button>
     </nav>
@@ -552,9 +566,22 @@ function renderObserve(){
               Close round ${rNum} → add waste &amp; run forest clean-up ▶</button>`}
       </div>
     </div>
+    <div class="row" style="gap:.4rem;margin-top:.7rem;flex-wrap:wrap">
+      <span class="tag ${pct>80?'bad':pct>55?'warn':'good'}">${pct}% full</span>
+      <span class="tok forest"><i class="sw forest" style="background:var(--forest-soft);box-shadow:inset 0 0 0 1.5px var(--forest)"></i> ${board.green} free</span>
+      <span class="tok house"><i class="sw house"></i> ${board.small+board.large}</span>
+      <span class="tok resource"><i class="sw resource"></i> ${board.resTokens}</span>
+      <span class="tok waste"><i class="sw waste"></i> ${board.waste}</span>
+      ${bg.over>0?`<span class="tag bad">⚠ ${bg.over} over</span>`:''}
+    </div>
   </div>
 
   <div class="grid g2">
+    <div class="card">
+      <div class="row spread"><h3>Teams this round</h3><small class="muted">${rd.actions.length}/${w.teams.length} logged</small></div>
+      <div class="grid" style="grid-template-columns:1fr;gap:.6rem;margin-top:.5rem">${teams}</div>
+    </div>
+
     <div class="card">
       <h3>Board entering round ${rNum}</h3>
       <div class="hexgrid" style="margin:.5rem 0">${bg.html}</div>
@@ -576,11 +603,6 @@ function renderObserve(){
       ${collapse?'<div class="rec warn" style="margin-top:.6rem"><h4>⚠ Island is full</h4><p>If this happened before the final round, mark a collective collapse in the session outcome below.</p></div>':''}
       <p class="muted" style="font-size:.78rem;margin-top:.6rem">The tool works out the board from the actions you logged and the forest clean-up. Set the free-forest count by hand if the real board differs.
         <button class="btn sm ghost" onclick="overrideGreen()">adjust forest count</button></p>
-    </div>
-
-    <div class="card">
-      <div class="row spread"><h3>Teams this round</h3><small class="muted">${rd.actions.length}/${w.teams.length} logged</small></div>
-      <div class="grid" style="grid-template-columns:1fr;gap:.6rem;margin-top:.5rem">${teams}</div>
     </div>
   </div>
 
@@ -642,7 +664,7 @@ function entryPanel(t,w){
       <button class="lev deep ${d.leverage==='deep'?'on':''}" onclick="draftLev('deep')">🌱 big change — a rule or the goal</button>
     </div>
 
-    <p class="muted" style="font-size:.74rem;margin:.3rem 0 0">💡 The token a team pays with is placed on the board. One R3 takes one tile. Two R1 take two tiles. Resources <em>gained</em> = houses touched (above). The only other way in is a share received.</p>
+    <p class="muted" style="font-size:.74rem;margin:.3rem 0 0">💡 Tokens paid from hand sit on the board (one R3 = one tile, two R1 = two tiles). "From board" means the team used free resources already there — renovating frees one, and overpaying leaves spare value. A team can take what's free and top up from hand.</p>
 
     <input type="text" id="d_notes" placeholder="optional note or quote…" value="${esc(d.notes||'')}" style="margin:.3rem 0">
     <button class="btn primary block" onclick="saveEntry()">✓ Save ${esc(t.name)}'s turn</button>
@@ -655,7 +677,7 @@ function ctxRow(icon,label,help,field){
 function stepper(field){const v=entryDraft[field]||0;
   return `<span class="stepper"><button type="button" onclick="draftStep('${field}',-1)">−</button><span class="val" id="step_${field}">${v}</span><button type="button" onclick="draftStep('${field}',1)">+</button></span>`;}
 
-function startEntry(tid){entryDraft={teamId:tid,action:'',spentR1:0,spentR3:0,connections:0,wasteRemoved:0,sharedGiven:0,sharedReceived:0,crosstalk:false,statedGoal:false,anticipated:false,leverage:null,notes:''};renderObserve();}
+function startEntry(tid){entryDraft={teamId:tid,action:'',spentR1:0,spentR3:0,fromBoard:0,connections:0,wasteRemoved:0,sharedGiven:0,sharedReceived:0,crosstalk:false,statedGoal:false,anticipated:false,leverage:null,notes:''};renderObserve();}
 function editEntry(tid){const rd=cur().sessions[S.ui.session].rounds[S.ui.round];const a=rd.actions.find(x=>x.teamId===tid);entryDraft={...a};renderObserve();}
 function cancelEntry(){entryDraft=null;renderObserve();}
 // keep transient inputs (notes) from being lost when we re-render the panel
@@ -663,31 +685,34 @@ function syncDraftInputs(){if(!entryDraft)return;const n=document.getElementById
 // re-render the Observe view without losing scroll position
 function rerenderObserve(){const y=window.scrollY;renderObserve();window.scrollTo(0,y);}
 function draftSet(f,v){syncDraftInputs();entryDraft[f]=v;
-  if(f==='action'){const a=v;
+  if(f==='action'){const a=v;entryDraft.fromBoard=0;
     if(a==='build_large'){entryDraft.spentR3=1;entryDraft.spentR1=0;}        // most build H2 with R3
     else if(a==='build_small'||a==='renovate'){entryDraft.spentR1=1;entryDraft.spentR3=0;}
     else if(a==='remove_waste'){entryDraft.spentR3=1;entryDraft.spentR1=0;if(!entryDraft.wasteRemoved)entryDraft.wasteRemoved=1;}
     if(!(a==='build_small'||a==='build_large'))entryDraft.connections=0;
   }
   rerenderObserve();}
-// which token(s) a team paid with — placed on the board, so the count affects space
+// how a team paid. format: [label, handR1, handR3, fromBoard, tag]
+// handR1/handR3 = own tokens placed on the board; fromBoard = value taken from the free pool.
+// A team can mix the two (take what's free, top up from hand).
 const PAID_OPTIONS={
-  build_small:[['1 R1',1,0,'usual'],['1 R3',0,1,'']],
-  build_large:[['1 R3',0,1,'usual'],['R1 + R1',2,0,'']],
-  renovate:[['1 R1',1,0,'usual'],['1 R3',0,1,'']]
+  build_small:[['1 R1',1,0,0,'usual'],['1 R3',0,1,0,''],['from board',0,0,1,'free']],
+  build_large:[['1 R3',0,1,0,'usual'],['2 R1',2,0,0,''],['1 board + 1 R1',1,0,1,''],['2 from board',0,0,2,'free']],
+  renovate:[['1 R1',1,0,0,'usual'],['1 R3',0,1,0,''],['from board',0,0,1,'free']]
 };
+const VALUE_NEEDED={build_small:1,build_large:2,renovate:1,remove_waste:0};
 function paidWithToggle(d){
   const opts=PAID_OPTIONS[d.action];
   if(!opts)return '';
-  const sel=(r1,r3)=>(d.spentR1||0)===r1&&(d.spentR3||0)===r3;
-  return `<div class="row" style="gap:.4rem;margin:.3rem 0 .2rem;align-items:center">
+  const sel=(r1,r3,fb)=>(d.spentR1||0)===r1&&(d.spentR3||0)===r3&&(d.fromBoard||0)===fb;
+  return `<div class="row" style="gap:.4rem;margin:.3rem 0 .2rem;align-items:center;flex-wrap:wrap">
     <small class="muted">paid with</small>
-    ${opts.map(([lab,r1,r3,tag])=>`<button class="lev ${sel(r1,r3)?'deep on':''}" onclick="setPaid(${r1},${r3})">🪵 ${lab}${tag?` <small>(${tag})</small>`:''}</button>`).join('')}
+    ${opts.map(([lab,r1,r3,fb,tag])=>`<button class="lev ${sel(r1,r3,fb)?'deep on':''}" onclick="setPaid(${r1},${r3},${fb})">${fb>0?'♻️':'🪵'} ${lab}${tag?` <small>(${tag})</small>`:''}</button>`).join('')}
   </div>`;
 }
-function setPaid(r1,r3){syncDraftInputs();entryDraft.spentR1=r1;entryDraft.spentR3=r3;rerenderObserve();}
+function setPaid(r1,r3,fromBoard){syncDraftInputs();entryDraft.spentR1=r1;entryDraft.spentR3=r3;entryDraft.fromBoard=fromBoard||0;rerenderObserve();}
 function normalizeSpend(d){
-  if(d.action==='remove_waste'){d.spentR3=Math.max(1,d.wasteRemoved||1);d.spentR1=0;}
+  if(d.action==='remove_waste'){d.spentR3=Math.max(1,d.wasteRemoved||1);d.spentR1=0;d.fromBoard=0;}
   // builds and renovate keep the "paid with" choice the facilitator picked
 }
 function draftStep(f,n){entryDraft[f]=Math.max(0,(entryDraft[f]||0)+n);
@@ -754,7 +779,79 @@ function resourcesHeld(w,s,r,tid,beforeCurrent){
   }
   return Math.max(0,h);
 }
-function flagTags(a){let s='';if(a.sharedGiven||a.sharedReceived)s+='<span class="tag good">🤝</span>';if(a.crosstalk)s+='<span class="tag">💬</span>';if(a.statedGoal)s+='<span class="tag">🎯</span>';if(a.anticipated)s+='<span class="tag">🔮</span>';if(a.leverage==='deep')s+='<span class="tag good">🌱 big change</span>';if(a.leverage==='shallow')s+='<span class="tag warn">⚙️ small tweak</span>';return s;}
+// value a team drew from the board (handles old data that used the fromPool flag)
+function boardUse(a){return a.fromBoard!=null?a.fromBoard:(a.fromPool?(VALUE_NEEDED[a.action]||0):0);}
+// value a team left on the board this action (overpay surplus beyond what it still needed)
+function surplusLeftBy(a){const need=Math.max(0,(VALUE_NEEDED[a.action]||0)-boardUse(a));return Math.max(0,((a.spentR1||0)+3*(a.spentR3||0))-need);}
+function flagTags(a){let s='';if(a.sharedGiven||a.sharedReceived)s+='<span class="tag good">🤝</span>';if(a.crosstalk)s+='<span class="tag">💬</span>';if(a.statedGoal)s+='<span class="tag">🎯</span>';if(a.anticipated)s+='<span class="tag">🔮</span>';if(a.leverage==='deep')s+='<span class="tag good">🌱 big change</span>';if(a.leverage==='shallow')s+='<span class="tag warn">⚙️ small tweak</span>';
+  const fb=boardUse(a);if(fb>0)s+=`<span class="tag good">♻️ ${fb} from board</span>`;
+  const sp=surplusLeftBy(a);if(sp>0)s+=`<span class="tag good">🪙 left ${sp}</span>`;
+  if(a.action==='renovate')s+='<span class="tag good">♻️ freed 1</span>';
+  return s;}
+// shared pool of spare resources on the board.
+// adds: overpaying a build, and renovating (frees 1). draws: paying part/all of an action from the board.
+function computeSharedPool(w){
+  let pool=0;const t={leftTotal:0,takenTotal:0,fundedCount:0,poolNow:0,perTeam:{},perSession:{}};
+  w.teams.forEach(tm=>t.perTeam[tm.id]={left:0,taken:0});
+  allActions(w).forEach(a=>{
+    const need=VALUE_NEEDED[a.action]||0;
+    const pt=t.perTeam[a.teamId]||(t.perTeam[a.teamId]={left:0,taken:0});
+    const ps=t.perSession[a.session]||(t.perSession[a.session]={left:0,taken:0,funded:0});
+    if(a.action==='renovate'){pool+=1;t.leftTotal+=1;pt.left+=1;ps.left+=1;}      // renovating frees a resource
+    const want=boardUse(a);const drew=Math.min(want,pool);
+    if(drew>0){pool-=drew;t.takenTotal+=drew;pt.taken+=drew;ps.taken+=drew;ps.funded++;t.fundedCount++;}
+    const surplus=surplusLeftBy(a);                                               // overpay left for others
+    if(surplus>0){pool+=surplus;t.leftTotal+=surplus;pt.left+=surplus;ps.left+=surplus;}
+  });
+  t.poolNow=Math.max(0,pool);return t;
+}
+
+/* ---- real statistics: sign test + Wilson interval, pooled across ALL workshops ----
+   Tests whether each team rose from its first session to its last more often than chance. */
+function logFact(n){let s=0;for(let i=2;i<=n;i++)s+=Math.log(i);return s;}
+function signTestP(up,down){            // two-sided p, null = coin-flip (0.5)
+  const n=up+down;if(n===0)return 1;const k=Math.max(up,down),ln2=Math.log(0.5);
+  let tail=0;for(let i=k;i<=n;i++)tail+=Math.exp(logFact(n)-logFact(i)-logFact(n-i)+n*ln2);
+  return Math.min(1,2*tail);
+}
+function wilson(up,n){if(!n)return[0,0];const z=1.96,p=up/n,d=1+z*z/n;
+  const c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;
+  return[Math.max(0,c-h),Math.min(1,c+h)];}
+function teamSessionValue(w,tid,sNum,measure){
+  const acts=allActions(w).filter(a=>a.teamId===tid&&a.session===sNum);
+  if(!acts.length)return null;
+  if(measure==='protect')return indicators(acts).TOI;
+  if(measure==='together')return indicators(acts).CI;
+  if(measure==='ahead')return indicators(acts).ANT;
+  if(measure==='boardshare'){let s=0;acts.forEach(a=>{s+=surplusLeftBy(a)+(a.action==='renovate'?1:0);});return s;}
+  return null;
+}
+function firstLastDeltas(measure){
+  const d=[];
+  S.workshops.forEach(w=>w.teams.forEach(t=>{
+    const sess=Object.keys(w.sessions).map(Number).filter(s=>allActions(w).some(a=>a.session===s&&a.teamId===t.id));
+    if(sess.length<2)return;
+    const f=teamSessionValue(w,t.id,sess[0],measure),l=teamSessionValue(w,t.id,sess[sess.length-1],measure);
+    if(f==null||l==null)return;d.push(l-f);
+  }));return d;
+}
+function generalisation(measure){
+  const d=firstLastDeltas(measure),e=1e-9;
+  const up=d.filter(x=>x>e).length,down=d.filter(x=>x<-e).length;
+  return {n:d.length,up,down,same:d.length-up-down,p:signTestP(up,down),ci:wilson(up,up+down)};
+}
+function survivalGeneralisation(){
+  let up=0,down=0;
+  S.workshops.forEach(w=>{const ss=Object.keys(w.sessions).map(Number).filter(s=>w.sessions[s].outcome.result);
+    if(ss.length<2)return;const f=w.sessions[ss[0]].outcome.result!=='collapse',l=w.sessions[ss[ss.length-1]].outcome.result!=='collapse';
+    if(f===l)return;if(!f&&l)up++;else down++;});
+  return {n:up+down,up,down,p:signTestP(up,down)};
+}
+function statVerdict(g){const eff=g.up+g.down;
+  if(eff<6)return['warn','Too few teams yet'];
+  if(g.p<0.05)return['good','Likely real'];
+  if(g.p<0.20)return['warn','Leaning that way'];
+  return['bad','No clear pattern yet'];}
 function barSeg(n,c){if(n<=0)return'';return `<div style="flex:${n};background:${c}"></div>`;}
 function boardGrid(b){
   const map={lg:'var(--house)',sm:'#5b9bd5',res:'var(--resource)',waste:'var(--waste)'};
@@ -883,6 +980,18 @@ function renderInsights(){
       <td>${d.ptag?`<span class="tag ${tagcls}">${d.pattern}</span>`:'<span class="muted">—</span>'}</td></tr>`;}).join('');
 
   const recs=recommendations(w,sm,mAll);
+  const pool=computeSharedPool(w);
+  // pooled statistics across ALL workshops (sign test + Wilson range)
+  const MEAS=[{k:'protect',lab:'Protecting the island',obj:1},{k:'boardshare',lab:'Sharing through the board',obj:1},{k:'together',lab:'Working together',obj:0},{k:'ahead',lab:'Thinking ahead',obj:0}];
+  const statRows=MEAS.map(m=>{const g=generalisation(m.k);const[vc,vt]=statVerdict(g);const eff=g.up+g.down;
+    return `<tr><td>${m.lab}${m.obj?'':' <small class="muted">(from your tags)</small>'}</td>
+      <td>${g.up}/${eff}</td>
+      <td>${eff<6?'—':(g.p<0.005?'<1%':Math.round(g.p*100)+'%')}</td>
+      <td>${eff?Math.round(g.ci[0]*100)+'–'+Math.round(g.ci[1]*100)+'%':'—'}</td>
+      <td><span class="tag ${vc}">${vt}</span></td></tr>`;}).join('');
+  const surv=survivalGeneralisation();
+  const nTeams=generalisation('protect').n;
+  const nWk=S.workshops.filter(x=>Object.keys(x.sessions).map(Number).filter(s=>allActions(x).some(a=>a.session===s)).length>=2).length;
 
   v.innerHTML=`
   <div class="card" style="position:relative;z-index:30;overflow:visible">
@@ -903,9 +1012,21 @@ function renderInsights(){
     ${recs}
   </div>
 
+  <div class="card">
+    <h3>♻️ Sharing through the board</h3>
+    <p class="muted" style="font-size:.82rem">A team can help others without handing tokens over. Spare resources reach the board two ways: paying with more than an action needs (an R3 for a small house), and renovating, which frees one resource. A later action can then take what's free — fully, or partly, topping up the rest from hand.</p>
+    <div class="grid g4" style="margin-top:.6rem">
+      <div class="metric"><div class="v">${pool.leftTotal}</div><div class="lab">spare value left on the board</div></div>
+      <div class="metric"><div class="v">${pool.takenTotal}</div><div class="lab">value later used from the board</div></div>
+      <div class="metric"><div class="v">${pool.fundedCount}</div><div class="lab">actions paid from leftovers</div></div>
+      <div class="metric"><div class="v">${pool.poolNow}</div><div class="lab">spare value still on the board</div></div>
+    </div>
+    ${(pool.leftTotal===0&&pool.takenTotal===0)?'<p class="muted" style="font-size:.78rem;margin-top:.5rem">Nothing here yet — teams are paying exactly what each action needs. It fills in when a team pays an R3 for a small build, or marks an action “board leftover”.</p>':''}
+  </div>
+
   <div class="grid g2">
     <div class="card"><h3>Change across sessions</h3>
-      <p class="muted" style="font-size:.8rem">The game aims to action three numbers up session by session: protecting the island, working together, and thinking ahead.</p>
+      <p class="muted" style="font-size:.8rem">The game aims to raise three numbers session by session: protecting the island, working together, and thinking ahead.</p>
       ${sm.length>1?lc:'<p class="muted">Log a second session to see the change.</p>'}
     </div>
     <div class="card"><h3>Waste on the board, last session, round by round</h3>
@@ -929,6 +1050,18 @@ function renderInsights(){
         <tbody>${teamRows}</tbody></table></div>
       <p class="muted" style="font-size:.76rem;margin-top:.4rem">Sorted from the team that worked together and planned most, down to the team that did so least. Pts = points scored. Touched/build = houses each build touched, on average (how a team earns resources). Big% = share of marked actions that were a big change. Pattern blends working together and protecting the island.</p>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>📐 Is the change real, or could it be chance?</h2>
+    <p class="muted" style="font-size:.84rem">This pools every team across all your workshops and checks the shift from each team's first session to its last. The harder it is for luck to explain the result, the more it holds beyond this room. The first two rows come from the actions alone; the last two also use your behaviour tags.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>What we measured</th><th>Teams that rose</th><th>Chance if the game did nothing</th><th>Likely range that rise</th><th>Read</th></tr></thead>
+      <tbody>${statRows}</tbody>
+    </table></div>
+    ${surv.n?`<p class="muted" style="font-size:.82rem;margin-top:.5rem">Avoiding collapse: ${surv.up} of ${surv.n} groups that changed went from a full board to surviving (chance if nothing changed: ${surv.p<0.005?'<1%':Math.round(surv.p*100)+'%'}).</p>`:''}
+    <p style="font-size:.82rem;margin-top:.5rem"><strong>What to do:</strong> “Likely real” — you can report this shift to others. “Leaning that way” — run a few more cohorts to be sure. “No clear pattern” — the game isn't shifting this yet; change how you facilitate or debrief it. “Too few teams yet” — keep collecting.</p>
+    <p class="muted" style="font-size:.78rem;margin-top:.4rem">How it is worked out: for each team, the tool compares its first session with its last and notes whether the number rose or fell. If the game changed nothing, a team is equally likely to rise or fall, like a coin. "Chance" is the probability of seeing this many teams rise by coin-flips alone. Based on ${nTeams} team(s) across ${nWk} workshop(s) with two or more sessions — it sharpens as you add cohorts. Teams in one game affect each other, so read this as strong evidence to act on, not final proof.</p>
   </div>`;
 }
 
@@ -1064,10 +1197,10 @@ function renderData(){
 function csvCell(s){s=String(s??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
 function download(name,text,type){const b=new Blob([text],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
 function exportCSV(){const w=cur();if(!w)return;
-  const head=['workshop','program','facilitator','date','session','round','team','action','points','spentR1','spentR3','housesTouched','resGained','wasteRemoved','sharedGiven','sharedReceived','crosstalk','statedGoal','anticipated','leverage','notes'];
+  const head=['workshop','program','facilitator','date','session','round','team','action','points','spentR1','spentR3','usedFromBoard','surplusLeft','housesTouched','resGained','wasteRemoved','sharedGiven','sharedReceived','crosstalk','statedGoal','anticipated','leverage','notes'];
   const lines=[head.join(',')];
   allActions(w).forEach(a=>{const t=w.teams.find(x=>x.id===a.teamId);
-    lines.push([w.name,w.program,w.facilitator,w.date,a.session,a.round,t?.name||'',a.action,actionPoints(a),a.spentR1||0,a.spentR3||0,a.connections||0,a.connections||0,a.wasteRemoved||0,a.sharedGiven||0,a.sharedReceived||0,a.crosstalk?1:0,a.statedGoal?1:0,a.anticipated?1:0,a.leverage||'',a.notes||''].map(csvCell).join(','));});
+    lines.push([w.name,w.program,w.facilitator,w.date,a.session,a.round,t?.name||'',a.action,actionPoints(a),a.spentR1||0,a.spentR3||0,boardUse(a),surplusLeftBy(a),a.connections||0,a.connections||0,a.wasteRemoved||0,a.sharedGiven||0,a.sharedReceived||0,a.crosstalk?1:0,a.statedGoal?1:0,a.anticipated?1:0,a.leverage||'',a.notes||''].map(csvCell).join(','));});
   download(slug(w.name)+'_actions.csv',lines.join('\n'),'text/csv');toast('Actions CSV exported');
 }
 function exportSummaryCSV(){const w=cur();if(!w)return;
