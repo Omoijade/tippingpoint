@@ -179,6 +179,23 @@ tbody tr:hover{background:#fafcfb}
 .legend{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:.35rem}
 
+/* ---------- Play (the live demo game) ---------- */
+.hx{stroke:#fff;stroke-width:2;cursor:default;transition:fill .12s}
+.hx.forest{fill:var(--forest-soft)}
+.hx.small,.hx.large{fill:var(--house)}
+.hx.r1{fill:#90a4ae}.hx.r3{fill:var(--resource)}
+.hx.waste{fill:var(--waste)}
+.hx.hot{cursor:pointer;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:5 3}
+.hx.hot:hover{fill:var(--accent-soft)}
+.hx.sel{stroke:var(--ink);stroke-width:3.5;stroke-dasharray:none}
+.turnhead{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;padding:.5rem .7rem;border-radius:var(--radius-sm);background:var(--accent-soft);margin-bottom:.5rem}
+.turnhead strong{font-size:1rem}
+.handtok{display:inline-flex;align-items:center;gap:.3rem;font-weight:800;font-size:.78rem;padding:.2rem .55rem;border-radius:999px;background:var(--resource-soft);color:var(--resource);border:1px solid var(--line)}
+.handtok.r3{background:#dfe7ea;color:#37474f}
+.supplyrow{display:flex;gap:.4rem;flex-wrap:wrap;font-size:.74rem}
+.supplyrow .tok{font-size:.72rem}
+.playhint{border:1.5px dashed var(--accent);background:#f4fbf9;border-radius:var(--radius-sm);padding:.5rem .7rem;font-size:.82rem;margin:.4rem 0}
+
 .appfoot{margin-top:1.5rem;padding:1.2rem 0 0;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:.82rem}
 .appfoot p{margin:0 0 .3rem}
 .appfoot a{color:var(--accent);font-weight:600;text-decoration:none}
@@ -208,6 +225,7 @@ tbody tr:hover{background:#fafcfb}
     <nav class="tabs" id="tabs">
       <button data-tab="home" class="active">🏠 Home</button>
       <button data-tab="learn">📖 Explain</button>
+      <button data-tab="play">🎲 Play</button>
       <button data-tab="observe">🔭 Observe</button>
       <button data-tab="insights">📊 Insights</button>
       <button data-tab="data">🗂️ Data</button>
@@ -220,6 +238,8 @@ tbody tr:hover{background:#fafcfb}
   <section class="view active" id="view-home"></section>
   <!-- ============== LEARN ============== -->
   <section class="view" id="view-learn"></section>
+  <!-- ============== PLAY ============== -->
+  <section class="view" id="view-play"></section>
   <!-- ============== OBSERVE ============== -->
   <section class="view" id="view-observe"></section>
   <!-- ============== INSIGHTS ============== -->
@@ -301,7 +321,7 @@ function go(tab){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function render(tab){
-  ({home:renderHome,learn:renderLearn,observe:renderObserve,insights:renderInsights,data:renderData}[tab])();
+  ({home:renderHome,learn:renderLearn,play:renderPlay,observe:renderObserve,insights:renderInsights,data:renderData}[tab])();
   const w=cur();
   document.getElementById('ctxChip').textContent=w?`${w.name}${w.program?' · '+w.program:''}`:'No workshop selected';
 }
@@ -398,7 +418,7 @@ function renderLearn(){
   <div class="card">
     <span class="eyebrow">What players are doing</span>
     <h1>How the game works</h1>
-    <p style="max-width:820px">An island has <strong>36 forest tiles</strong>. Up to four teams play. The game runs for <strong>six rounds</strong>. Each round, every team takes one action. Teams score points by building houses. Houses also make waste. Free forest soaks up some waste each round. <strong>If houses, resources, and waste fill all 36 tiles before round six, every team loses at once.</strong> A team scores only while the island still has space, so each team depends on keeping the island livable.</p>
+    <p style="max-width:820px">An island has <strong>36 forest tiles</strong>, ringing a hole at its centre. Up to four teams play. The game runs for <strong>six rounds</strong>. Each round, every team takes one action. Teams score points by building houses. Houses also make waste. Free forest soaks up some waste each round. <strong>If houses, resources, and waste fill all 36 tiles before round six, every team loses at once.</strong> A team scores only while the island still has space, so each team depends on keeping the island livable.</p>
     <div class="legend">
       <span><i class="sw forest"></i> 36 forest tiles, shared by all teams</span>
       <span><i class="sw house"></i> small = 1 pt / 1 waste · large = 2 pt / 2 waste</span>
@@ -414,8 +434,8 @@ function renderLearn(){
       <tbody>
         <tr><td>🏠 Build small</td><td>1 R1</td><td>+1</td><td>+1</td><td>cheap, low impact</td></tr>
         <tr><td>🏰 Build large</td><td><strong>1 R3</strong> (or 2 R1)</td><td>+2</td><td>+2</td><td>most common action — biggest score</td></tr>
-        <tr><td>🔧 Renovate L→S</td><td>1 resource</td><td>+1</td><td>−1</td><td>frees a resource &amp; cuts waste</td></tr>
-        <tr><td>🧹 Remove waste</td><td>1 R3 each</td><td>+1 each</td><td>—</td><td>manual clean-up when forest can't cope</td></tr>
+        <tr><td>🔧 Renovate L→S <small>(any team's)</small></td><td>1 resource from hand</td><td>+1</td><td>−1</td><td>cuts waste; the payment stays on the board, value free for neighbours</td></tr>
+        <tr><td>🧹 Remove waste</td><td>1 R3 <em>or</em> 3 R1 each</td><td>+1 each</td><td>—</td><td>manual clean-up when forest can't cope</td></tr>
       </tbody>
     </table></div>
     <div class="legend" style="margin-top:.6rem">
@@ -438,11 +458,12 @@ function renderLearn(){
           <li>Resources left at the end add to a team's score.</li>
         </ul></div></details>
 
-      <details class="acc"><summary>🧩 Components</summary><div class="body">
-        <p><span class="tok resource"><i class="sw resource"></i>Resources</span> two types: <strong>R1</strong> and <strong>R3</strong> (R3 = three R1). Each team <strong>starts with 2 random tokens</strong>; after that the only way in is connecting houses (or a share).</p>
-        <p><span class="tok house"><i class="sw house"></i>Houses</span> two sizes: small (1 pt) and large (2 pt).</p>
-        <p><span class="tok waste"><i class="sw waste"></i>Waste</span> red bins produced by houses each round.</p>
-        <p><span class="tok forest"><i class="sw forest"></i>Forest</span> the 36-hex board; free forest absorbs waste.</p>
+      <details class="acc"><summary>🧩 Components — what is in the box</summary><div class="body">
+        <p><span class="tok resource"><i class="sw resource"></i>Resources</span> two types: <strong>20 × R1</strong> and <strong>15 × R3</strong> (one R3 = three R1). Each team <strong>starts with 2 random tokens</strong>; after that the only way in is connecting houses (or a share).</p>
+        <p><span class="tok house"><i class="sw house"></i>Houses</span> two sizes: <strong>20 small</strong> (1 pt) and <strong>15 large</strong> (2 pt).</p>
+        <p><span class="tok waste"><i class="sw waste"></i>Waste</span> <strong>20 red bins</strong> produced by houses each round.</p>
+        <p><span class="tok forest"><i class="sw forest"></i>Forest</span> the <strong>36-hex board</strong>; free forest absorbs waste.</p>
+        <p class="muted" style="font-size:.82rem">Want to feel the rules instead of reading them? The <a href="#" onclick="go('play');return false">Play screen</a> has the whole game ready to run.</p>
       </div></details>
 
       <details class="acc"><summary>🔁 A round has three phases</summary><div class="body">
@@ -645,11 +666,15 @@ function entryPanel(t,w){
 
     <div class="step">2 · Quick context <span class="muted" style="font-weight:400">— only what you saw</span></div>
     <div class="ctx">
-      ${isBuild?ctxRow('🔗','Houses it touched → resources earned','the only way to gain resources: +1 token per house touched','connections'):''}
+      ${isBuild?ctxRow('🔗','Houses it touched → resources earned','any house counts, the builder\'s own or not: +1 token per house touched','connections'):''}
+      ${isBuild?ctxRow('🏘','Of those, another team\'s houses','building beside a rival still pays — worth seeing','touchedOther'):''}
       ${a==='remove_waste'?ctxRow('🧹','Waste tokens removed','+1 point each','wasteRemoved'):''}
       ${ctxRow('🤝','Gave resources to another team','a cooperation action','sharedGiven')}
       ${ctxRow('🫱','Received resources from another team','','sharedReceived')}
     </div>
+    ${a==='renovate'?`<div class="row" style="gap:.35rem;margin:.2rem 0">
+      <button class="chip ${d.renovatedOther?'on':''}" onclick="draftToggle('renovatedOther')">🏚 it was another team's house</button>
+    </div>`:''}
 
     <div class="step">3 · Behaviour you observed</div>
     <div class="row" style="gap:.35rem;margin:.35rem 0">
@@ -664,7 +689,7 @@ function entryPanel(t,w){
       <button class="lev deep ${d.leverage==='deep'?'on':''}" onclick="draftLev('deep')">🌱 big change — a rule or the goal</button>
     </div>
 
-    <p class="muted" style="font-size:.74rem;margin:.3rem 0 0">💡 Tokens paid from hand sit on the board (one R3 = one tile, two R1 = two tiles). "From board" means the team used free resources already there — renovating frees one, and overpaying leaves spare value. A team can take what's free and top up from hand.</p>
+    <p class="muted" style="font-size:.74rem;margin:.3rem 0 0">💡 Tokens paid for a build or renovation sit beside the house, where the team chose to put them. "From board" means the team built next to spare value already lying there — a renovation payment keeps its full value, an overpaid R3 keeps the difference. Spare value only serves a house built beside it.</p>
 
     <input type="text" id="d_notes" placeholder="optional note or quote…" value="${esc(d.notes||'')}" style="margin:.3rem 0">
     <button class="btn primary block" onclick="saveEntry()">✓ Save ${esc(t.name)}'s turn</button>
@@ -677,7 +702,7 @@ function ctxRow(icon,label,help,field){
 function stepper(field){const v=entryDraft[field]||0;
   return `<span class="stepper"><button type="button" onclick="draftStep('${field}',-1)">−</button><span class="val" id="step_${field}">${v}</span><button type="button" onclick="draftStep('${field}',1)">+</button></span>`;}
 
-function startEntry(tid){entryDraft={teamId:tid,action:'',spentR1:0,spentR3:0,fromBoard:0,connections:0,wasteRemoved:0,sharedGiven:0,sharedReceived:0,crosstalk:false,statedGoal:false,anticipated:false,leverage:null,notes:''};renderObserve();}
+function startEntry(tid){entryDraft={teamId:tid,action:'',spentR1:0,spentR3:0,fromBoard:0,connections:0,touchedOther:0,renovatedOther:false,wastePayMode:'r3',wasteRemoved:0,sharedGiven:0,sharedReceived:0,crosstalk:false,statedGoal:false,anticipated:false,leverage:null,notes:''};renderObserve();}
 function editEntry(tid){const rd=cur().sessions[S.ui.session].rounds[S.ui.round];const a=rd.actions.find(x=>x.teamId===tid);entryDraft={...a};renderObserve();}
 function cancelEntry(){entryDraft=null;renderObserve();}
 // keep transient inputs (notes) from being lost when we re-render the panel
@@ -688,8 +713,9 @@ function draftSet(f,v){syncDraftInputs();entryDraft[f]=v;
   if(f==='action'){const a=v;entryDraft.fromBoard=0;
     if(a==='build_large'){entryDraft.spentR3=1;entryDraft.spentR1=0;}        // most build H2 with R3
     else if(a==='build_small'||a==='renovate'){entryDraft.spentR1=1;entryDraft.spentR3=0;}
-    else if(a==='remove_waste'){entryDraft.spentR3=1;entryDraft.spentR1=0;if(!entryDraft.wasteRemoved)entryDraft.wasteRemoved=1;}
-    if(!(a==='build_small'||a==='build_large'))entryDraft.connections=0;
+    else if(a==='remove_waste'){entryDraft.spentR3=1;entryDraft.spentR1=0;if(!entryDraft.wasteRemoved)entryDraft.wasteRemoved=1;if(!entryDraft.wastePayMode)entryDraft.wastePayMode='r3';}
+    if(!(a==='build_small'||a==='build_large')){entryDraft.connections=0;entryDraft.touchedOther=0;}
+    if(a!=='renovate')entryDraft.renovatedOther=false;
   }
   rerenderObserve();}
 // how a team paid. format: [label, handR1, handR3, fromBoard, tag]
@@ -698,10 +724,17 @@ function draftSet(f,v){syncDraftInputs();entryDraft[f]=v;
 const PAID_OPTIONS={
   build_small:[['1 R1',1,0,0,'usual'],['1 R3',0,1,0,''],['from board',0,0,1,'free']],
   build_large:[['1 R3',0,1,0,'usual'],['2 R1',2,0,0,''],['1 board + 1 R1',1,0,1,''],['2 from board',0,0,2,'free']],
-  renovate:[['1 R1',1,0,0,'usual'],['1 R3',0,1,0,''],['from board',0,0,1,'free']]
+  renovate:[['1 R1',1,0,0,'usual'],['1 R3',0,1,0,'']]   // renovation is paid from hand only
 };
 const VALUE_NEEDED={build_small:1,build_large:2,renovate:1,remove_waste:0};
 function paidWithToggle(d){
+  if(d.action==='remove_waste'){
+    return `<div class="row" style="gap:.4rem;margin:.3rem 0 .2rem;align-items:center;flex-wrap:wrap">
+      <small class="muted">paid with</small>
+      <button class="lev ${d.wastePayMode!=='r1'?'deep on':''}" onclick="setWastePay('r3')">🪵 1 R3 each <small>(usual)</small></button>
+      <button class="lev ${d.wastePayMode==='r1'?'deep on':''}" onclick="setWastePay('r1')">🪵 3 R1 each</button>
+    </div>`;
+  }
   const opts=PAID_OPTIONS[d.action];
   if(!opts)return '';
   const sel=(r1,r3,fb)=>(d.spentR1||0)===r1&&(d.spentR3||0)===r3&&(d.fromBoard||0)===fb;
@@ -711,9 +744,14 @@ function paidWithToggle(d){
   </div>`;
 }
 function setPaid(r1,r3,fromBoard){syncDraftInputs();entryDraft.spentR1=r1;entryDraft.spentR3=r3;entryDraft.fromBoard=fromBoard||0;rerenderObserve();}
+function setWastePay(m){syncDraftInputs();entryDraft.wastePayMode=m;rerenderObserve();}
 function normalizeSpend(d){
-  if(d.action==='remove_waste'){d.spentR3=Math.max(1,d.wasteRemoved||1);d.spentR1=0;d.fromBoard=0;}
+  if(d.action==='remove_waste'){const n=Math.max(1,d.wasteRemoved||1);
+    if(d.wastePayMode==='r1'){d.spentR1=3*n;d.spentR3=0;}else{d.spentR3=n;d.spentR1=0;}
+    d.fromBoard=0;}
   // builds and renovate keep the "paid with" choice the facilitator picked
+  d.touchedOther=Math.min(d.touchedOther||0,d.connections||0);
+  if(d.action!=='renovate')d.renovatedOther=false;
 }
 function draftStep(f,n){entryDraft[f]=Math.max(0,(entryDraft[f]||0)+n);
   // update the number in place — no re-render, so the ledger stays open & scroll/notes are kept
@@ -752,7 +790,7 @@ function liveBoard(w,s,r){
       const placed=(a.spentR1||0)+(a.spentR3||0); // tokens paid with go on the board
       if(a.action==='build_small'){small++;resTokens+=placed;}
       else if(a.action==='build_large'){large++;resTokens+=placed;}
-      else if(a.action==='renovate'){if(large>0){large--;small++;}resTokens=Math.max(0,resTokens-1);} // renovating frees 1 token
+      else if(a.action==='renovate'){if(large>0){large--;small++;}resTokens+=placed;} // the payment token stays on the board, its value freed
       else if(a.action==='remove_waste'){waste=Math.max(0,waste-(a.wasteRemoved||0));}
     });
     let green=36-(small+large+resTokens+waste);
@@ -781,12 +819,16 @@ function resourcesHeld(w,s,r,tid,beforeCurrent){
 }
 // value a team drew from the board (handles old data that used the fromPool flag)
 function boardUse(a){return a.fromBoard!=null?a.fromBoard:(a.fromPool?(VALUE_NEEDED[a.action]||0):0);}
+// value an action needs. Removing waste needs exactly 1 R3 per waste, so it can never overpay.
+function valueNeeded(a){return a.action==='remove_waste'?3*(a.wasteRemoved||0):(VALUE_NEEDED[a.action]||0);}
 // value a team left on the board this action (overpay surplus beyond what it still needed)
-function surplusLeftBy(a){const need=Math.max(0,(VALUE_NEEDED[a.action]||0)-boardUse(a));return Math.max(0,((a.spentR1||0)+3*(a.spentR3||0))-need);}
+function surplusLeftBy(a){const need=Math.max(0,valueNeeded(a)-boardUse(a));return Math.max(0,((a.spentR1||0)+3*(a.spentR3||0))-need);}
 function flagTags(a){let s='';if(a.sharedGiven||a.sharedReceived)s+='<span class="tag good">🤝</span>';if(a.crosstalk)s+='<span class="tag">💬</span>';if(a.statedGoal)s+='<span class="tag">🎯</span>';if(a.anticipated)s+='<span class="tag">🔮</span>';if(a.leverage==='deep')s+='<span class="tag good">🌱 big change</span>';if(a.leverage==='shallow')s+='<span class="tag warn">⚙️ small tweak</span>';
   const fb=boardUse(a);if(fb>0)s+=`<span class="tag good">♻️ ${fb} from board</span>`;
-  const sp=surplusLeftBy(a);if(sp>0)s+=`<span class="tag good">🪙 left ${sp}</span>`;
-  if(a.action==='renovate')s+='<span class="tag good">♻️ freed 1</span>';
+  if(a.action==='renovate'){const val=(a.spentR1||0)+3*(a.spentR3||0)||1;s+=`<span class="tag good">♻️ freed ${val}</span>`;
+    if(a.renovatedOther)s+='<span class="tag good">🏚 another team’s</span>';}
+  else{const sp=surplusLeftBy(a);if(sp>0)s+=`<span class="tag good">🪙 left ${sp}</span>`;}
+  if((a.touchedOther||0)>0)s+=`<span class="tag good">🏘 +${a.touchedOther} other-team</span>`;
   return s;}
 // shared pool of spare resources on the board.
 // adds: overpaying a build, and renovating (frees 1). draws: paying part/all of an action from the board.
@@ -862,6 +904,482 @@ function boardGrid(b){
   const free=36-arr.length;for(let i=0;i<free;i++)arr.push('free');
   const html=arr.map(k=>k==='free'?'<div class="cell free"></div>':`<div class="cell" style="background:${map[k]}"></div>`).join('');
   return {html,over,free};
+}
+
+/* =====================================================================
+   PLAY — a playable copy of the game for live demos.
+   One person plays every team in turn. Each confirmed turn is saved as
+   a normal logged action, so a played game fills Insights and the CSV
+   export exactly like a watched one.
+   ===================================================================== */
+/* what is in the physical box */
+const BOX={r1:20,r3:15,h1:20,h2:15,waste:20};
+const BOX_LABEL={r1:'R1 tokens',r3:'R3 tokens',h1:'small houses',h2:'large houses',waste:'waste tokens'};
+
+/* the island: a hexagon of 37 cells with the centre missing — 36 playable
+   hexes ringing a hole. Neighbours found by centre distance. */
+const HEX_R=28,HEX_W=Math.sqrt(3)*HEX_R,HEX_CX=192,HEX_CY=160;
+const HEX_HOLE={x:HEX_CX,y:HEX_CY};
+const HEXES=(()=>{const out=[];let i=0;
+  for(let r=-3;r<=3;r++)for(let q=Math.max(-3,-3-r);q<=Math.min(3,3-r);q++){
+    if(q===0&&r===0)continue;
+    out.push({i:i++,x:HEX_CX+HEX_W*(q+r/2),y:HEX_CY+1.5*HEX_R*r});}
+  return out;})();
+const HEX_ADJ=HEXES.map(h=>HEXES.filter(o=>o.i!==h.i&&Math.hypot(o.x-h.x,o.y-h.y)<HEX_W*1.15).map(o=>o.i));
+function hexPoly(cx,cy){return Array.from({length:6},(_,k)=>{const a=Math.PI/180*(60*k-90);
+  return (cx+(HEX_R-1.5)*Math.cos(a)).toFixed(1)+','+(cy+(HEX_R-1.5)*Math.sin(a)).toFixed(1);}).join(' ');}
+const HEX_PTS=HEXES.map(h=>hexPoly(h.x,h.y));
+const HEX_VB='0 0 384 320';
+
+function hexDist(a,b){return Math.hypot(HEXES[a].x-HEXES[b].x,HEXES[a].y-HEXES[b].y);}
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* the running game lives inside the current session, so it survives reloads
+   and travels with the JSON backup */
+function game(){const w=cur();return w?(w.sessions[S.ui.session].game||null):null;}
+function freeHexes(g){const out=[];for(let i=0;i<36;i++)if(!g.cells[i])out.push(i);return out;}
+function boardCounts(g){const n={small:0,large:0,r1:0,r3:0,waste:0};Object.values(g.cells).forEach(c=>n[c.k]++);return n;}
+function drawToken(g){const t=g.supply.r1+g.supply.r3;if(t<=0)return null;
+  const k=Math.random()*t<g.supply.r1?'r1':'r3';g.supply[k]--;return k;}
+function adjFree(g,i){return HEX_ADJ[i].filter(n=>!g.cells[n]);}
+/* spare value sitting on resource tokens NEXT TO hex i — the only value a build there can use */
+function adjSpare(g,i){return HEX_ADJ[i].reduce((s,n)=>{const c=g.cells[n];
+  return s+((c&&(c.k==='r1'||c.k==='r3'))?(c.v||0):0);},0);}
+function boardSpare(g){return Object.values(g.cells).reduce((s,c)=>s+((c.k==='r1'||c.k==='r3')?(c.v||0):0),0);}
+function handValue(h){return h.r1+3*h.r3;}
+/* spend spare value from tokens next to hex i, biggest first */
+function drawFromBoard(g,i,amount){let left=amount;
+  HEX_ADJ[i].map(n=>g.cells[n]).filter(c=>c&&(c.k==='r1'||c.k==='r3')&&(c.v||0)>0)
+    .sort((a,b)=>(b.v||0)-(a.v||0)).forEach(c=>{if(left<=0)return;const take=Math.min(c.v,left);c.v-=take;left-=take;});}
+/* what can pay for this action AT this hex — board value only counts if it sits beside the hex */
+function payCombos(g,tid,action,hexI){
+  const h=g.hands[tid],out=[];
+  if(action==='renovate'){
+    if(adjFree(g,hexI).length<1)return out;          // the payment token needs a free hex beside the house
+    if(h.r1>=1)out.push({lab:'1 R1',r1:1,r3:0,fb:0,tag:'usual'});
+    if(h.r3>=1)out.push({lab:'1 R3',r1:0,r3:1,fb:0,tag:'leaves 3 free'});
+    return out;}
+  const spare=adjSpare(g,hexI),freeAdj=adjFree(g,hexI).length;
+  (PAID_OPTIONS[action]||[]).forEach(([lab,r1,r3,fb,tag])=>{
+    if(h.r1>=r1&&h.r3>=r3&&spare>=fb&&freeAdj>=r1+r3)out.push({lab,r1,r3,fb,tag});});
+  return out;}
+/* exact ways to pay value 3 per waste from hand (R3s, R1-triples, or a mix) */
+function wasteCombos(h,n){const out=[];
+  for(let x=Math.min(h.r3,n);x>=0;x--){const r1=3*(n-x);
+    if(h.r1>=r1)out.push({lab:(x?x+' R3':'')+(x&&r1?' + ':'')+(r1?r1+' R1':''),r3:x,r1,fb:0});}
+  return out;}
+function canAct(g,tid,action){const bc=boardCounts(g),h=g.hands[tid];
+  if(action==='build_small')return g.supply.h1>0&&freeHexes(g).some(i=>payCombos(g,tid,'build_small',i).length);
+  if(action==='build_large')return g.supply.h2>0&&freeHexes(g).some(i=>payCombos(g,tid,'build_large',i).length);
+  if(action==='renovate')return g.supply.h1>0&&(h.r1+h.r3)>=1&&
+    Object.keys(g.cells).some(i=>g.cells[i].k==='large'&&adjFree(g,+i).length>=1);
+  if(action==='remove_waste')return bc.waste>0&&handValue(h)>=3;
+  return false;}
+function whyNot(g,tid,a){const h=g.hands[tid];
+  if(a==='build_small'){if(g.supply.h1<=0)return'no small houses left in the box';return'no hex it can pay for';}
+  if(a==='build_large'){if(g.supply.h2<=0)return'no large houses left in the box';return'no hex it can pay for';}
+  if(a==='renovate'){if(g.supply.h1<=0)return'no small houses left in the box';if((h.r1+h.r3)<1)return'needs 1 token from hand';return'no large house with a free hex beside it';}
+  if(a==='remove_waste'){if(!boardCounts(g).waste)return'no waste on the board';return'needs value 3 per waste (1 R3 or 3 R1)';}
+  return'';}
+function playScores(w,g){const acts=allActions(w).filter(a=>a.session===S.ui.session);
+  return w.teams.map(t=>{const pts=acts.filter(a=>a.teamId===t.id).reduce((s,a)=>s+actionPoints(a),0);
+    const h=g.hands[t.id]||{r1:0,r3:0};return {team:t,pts,held:h.r1+h.r3,total:pts+h.r1+h.r3,hand:h};})
+    .sort((a,b)=>b.total-a.total);}
+function teamTag(w,tid){const t=w.teams.find(x=>x.id===tid);if(!t)return'';
+  const m=t.name.match(/(\d+)\s*$/);return m?'T'+m[1]:t.name.slice(0,2).toUpperCase();}
+
+/* ---- game lifecycle ---- */
+let playDraft=null;
+function freshDraft(){return{action:'',hex:null,combo:null,tokHexes:[],wasteSel:[],wastePay:null,give:{},crosstalk:false,statedGoal:false,anticipated:false,leverage:null,notes:''};}
+function startGame(){
+  const w=cur();if(!w)return;const sNum=S.ui.session,sess=w.sessions[sNum];
+  if(Object.values(sess.rounds).some(r=>r.actions.length)&&
+     !confirm('Session '+sNum+' already has logged actions. Playing replaces them. Continue?'))return;
+  Object.values(sess.rounds).forEach(r=>{r.actions=[];r.closed=false;delete r.greenOverride;r.wasteAdded=0;r.biodegrade=0;});
+  sess.outcome={result:'',collapseRound:null,winner:'',notes:''};
+  const g={status:'playing',round:1,turn:0,cells:{},supply:{...BOX},hands:{},pendingShare:{},result:null,collapseRound:null};
+  w.teams.forEach(t=>{g.hands[t.id]={r1:0,r3:0};for(let i=0;i<2;i++){const k=drawToken(g);if(k)g.hands[t.id][k]++;}});
+  sess.game=g;S.ui.round=1;playDraft=freshDraft();save();renderPlay();
+  toast('Game on — every team drew 2 random tokens');
+}
+function quitGame(){if(!confirm('Stop this game? Turns already confirmed stay in the data.'))return;
+  delete cur().sessions[S.ui.session].game;playDraft=null;save();renderPlay();}
+function playSetSession(n){S.ui.session=n;S.ui.round=1;playDraft=null;save();renderPlay();}
+function syncPlayInputs(){if(!playDraft)return;const n=document.getElementById('p_notes');if(n)playDraft.notes=n.value;}
+function rerenderPlay(){syncPlayInputs();const y=window.scrollY;renderPlay();window.scrollTo(0,y);}
+
+/* ---- turn flow ---- */
+function pickAction(a){const g=game(),t=cur().teams[g.turn],d=playDraft;
+  if(!canAct(g,t.id,a))return;
+  d.action=a;d.hex=null;d.combo=null;d.tokHexes=[];d.wasteSel=[];d.wastePay=null;
+  rerenderPlay();}
+function pickCombo(idx){const g=game(),t=cur().teams[g.turn],d=playDraft;
+  const cs=payCombos(g,t.id,d.action,d.hex);if(!cs[idx])return;
+  d.combo=cs[idx];d.tokHexes=[];rerenderPlay();}
+function pickWasteCombo(idx){const g=game(),t=cur().teams[g.turn],d=playDraft;
+  const cs=wasteCombos(g.hands[t.id],d.wasteSel.length);if(!cs[idx])return;
+  d.wastePay=cs[idx];rerenderPlay();}
+function togTag(f){playDraft[f]=!playDraft[f];rerenderPlay();}
+function togLev(v){playDraft.leverage=playDraft.leverage===v?null:v;rerenderPlay();}
+function resetTurn(){playDraft=freshDraft();rerenderPlay();}
+function stagedGive(d,kind){return Object.values(d.give).reduce((s,o)=>s+o[kind],0);}
+function stagedPay(d,kind){if(d.action==='remove_waste')return d.wastePay?d.wastePay[kind]:0;
+  return d.combo?d.combo[kind]:0;}
+function giveTok(kind){const g=game(),w=cur(),t=w.teams[g.turn],d=playDraft;
+  const sel=document.getElementById('giveTeam');if(!sel||!sel.value)return;
+  if(g.hands[t.id][kind]-stagedPay(d,kind)-stagedGive(d,kind)<1){toast('No spare '+kind.toUpperCase()+' to give');return;}
+  (d.give[sel.value]=d.give[sel.value]||{r1:0,r3:0})[kind]++;rerenderPlay();}
+function clearGive(){playDraft.give={};rerenderPlay();}
+function hexTap(i){const g=game();if(!g||g.status!=='playing'||!playDraft)return;
+  const w=cur(),t=w.teams[g.turn],d=playDraft;if(!d.action)return;
+  if(d.action==='build_small'||d.action==='build_large'){
+    // a tap next to the chosen spot places (or lifts) a paid token; other taps move the house
+    if(d.hex!=null&&d.combo&&!g.cells[i]&&HEX_ADJ[d.hex].includes(i)){
+      const at=d.tokHexes.indexOf(i);
+      if(at>=0)d.tokHexes.splice(at,1);
+      else if(d.tokHexes.length<d.combo.r1+d.combo.r3)d.tokHexes.push(i);
+      else if(d.combo.r1+d.combo.r3>0)toast('All paid tokens are placed — tap one to lift it');}
+    else if(!g.cells[i]&&payCombos(g,t.id,d.action,i).length){
+      d.hex=i;d.combo=payCombos(g,t.id,d.action,i)[0];d.tokHexes=[];}
+    else if(!g.cells[i])toast('Nothing in hand or beside that hex can pay for a build there');
+  }else if(d.action==='renovate'){
+    if(g.cells[i]&&g.cells[i].k==='large'){
+      if(!adjFree(g,i).length){toast('No free hex beside that house for the payment token');return;}
+      d.hex=i;d.combo=payCombos(g,t.id,'renovate',i)[0]||null;d.tokHexes=[];}
+    else if(d.hex!=null&&!g.cells[i]&&HEX_ADJ[d.hex].includes(i)){d.tokHexes=[i];}
+  }else if(d.action==='remove_waste'){
+    if(!(g.cells[i]&&g.cells[i].k==='waste'))return;
+    const at=d.wasteSel.indexOf(i);
+    if(at>=0)d.wasteSel.splice(at,1);
+    else{if((d.wasteSel.length+1)*3>handValue(g.hands[t.id])){toast('Each waste costs value 3 (1 R3 or 3 R1) — not enough in hand');return;}d.wasteSel.push(i);}
+    d.wastePay=wasteCombos(g.hands[t.id],d.wasteSel.length)[0]||null;
+  }else return;
+  rerenderPlay();}
+function skipTurn(){const w=cur(),g=game();playDraft=freshDraft();g.turn++;
+  if(g.turn>=w.teams.length){closePlayRound();return;}save();renderPlay();}
+
+function confirmTurn(){
+  syncPlayInputs();
+  const w=cur(),g=game(),sNum=S.ui.session,t=w.teams[g.turn],d=playDraft,h=g.hands[t.id];
+  let spentR1=0,spentR3=0,fromBoard=0,conn=0,connOther=0,renovOther=false,wasteN=0;
+  // everything staged (payment + gifts) must still fit in the hand
+  if(h.r1<stagedPay(d,'r1')+stagedGive(d,'r1')||h.r3<stagedPay(d,'r3')+stagedGive(d,'r3')){
+    toast('Not enough tokens in hand for the payment and the gifts together');return;}
+  if(d.action==='build_small'||d.action==='build_large'){
+    if(d.hex==null||!d.combo||d.tokHexes.length!==d.combo.r1+d.combo.r3)return;
+    const neigh=HEX_ADJ[d.hex].map(n=>g.cells[n]).filter(c=>c&&(c.k==='small'||c.k==='large'));
+    conn=neigh.length;connOther=neigh.filter(c=>c.team!==t.id).length;
+    spentR1=d.combo.r1;spentR3=d.combo.r3;fromBoard=d.combo.fb;
+    g.cells[d.hex]={k:d.action==='build_small'?'small':'large',team:t.id};
+    g.supply[d.action==='build_small'?'h1':'h2']--;
+    h.r1-=spentR1;h.r3-=spentR3;
+    drawFromBoard(g,d.hex,fromBoard);                     // spend spare value sitting beside the hex
+    // paid tokens go where the player put them; any overpay stays usable on the R3
+    const surplus=Math.max(0,spentR1+3*spentR3+fromBoard-(d.action==='build_small'?1:2));
+    const kinds=[];for(let k=0;k<spentR3;k++)kinds.push('r3');for(let k=0;k<spentR1;k++)kinds.push('r1');
+    d.tokHexes.forEach((hx,j)=>{g.cells[hx]={k:kinds[j],v:(kinds[j]==='r3'&&j===0)?surplus:0};});
+  }else if(d.action==='renovate'){
+    if(d.hex==null||!d.combo||d.tokHexes.length!==1)return;
+    renovOther=g.cells[d.hex].team!==t.id;
+    g.cells[d.hex].k='small';g.supply.h2++;g.supply.h1--;
+    spentR1=d.combo.r1;spentR3=d.combo.r3;
+    h.r1-=spentR1;h.r3-=spentR3;
+    // the payment token stays on the board beside the house, its full value free for any neighbour
+    const kind=spentR3?'r3':'r1';
+    g.cells[d.tokHexes[0]]={k:kind,v:kind==='r3'?3:1};
+  }else if(d.action==='remove_waste'){
+    if(!d.wasteSel.length||!d.wastePay)return;
+    wasteN=d.wasteSel.length;
+    d.wasteSel.forEach(i=>{delete g.cells[i];g.supply.waste++;});
+    spentR1=d.wastePay.r1;spentR3=d.wastePay.r3;
+    h.r1-=spentR1;h.r3-=spentR3;g.supply.r1+=spentR1;g.supply.r3+=spentR3;   // clean-up cost goes to the box
+  }else return;
+  // earn: +1 random token from the box per house touched (anyone's house counts)
+  const earned=[];for(let k=0;k<conn;k++){const tok=drawToken(g);if(tok){h[tok]++;earned.push(tok);}}
+  // gifts to other teams
+  let givenTotal=0;
+  Object.entries(d.give).forEach(([tid,o])=>{const n=o.r1+o.r3;if(!n)return;
+    h.r1-=o.r1;h.r3-=o.r3;g.hands[tid].r1+=o.r1;g.hands[tid].r3+=o.r3;givenTotal+=n;
+    const rd0=w.sessions[sNum].rounds[g.round];
+    const prior=rd0.actions.find(x=>x.teamId===tid);
+    if(prior)prior.sharedReceived=(prior.sharedReceived||0)+n;
+    else g.pendingShare[tid]=(g.pendingShare[tid]||0)+n;});
+  // save the turn as a normal logged action — same shape Observe writes
+  const rec={teamId:t.id,action:d.action,spentR1,spentR3,fromBoard,
+    connections:conn,touchedOther:connOther,renovatedOther:renovOther,wasteRemoved:wasteN,
+    sharedGiven:givenTotal,sharedReceived:g.pendingShare[t.id]||0,
+    crosstalk:d.crosstalk,statedGoal:d.statedGoal,anticipated:d.anticipated,
+    leverage:d.leverage,notes:d.notes,viaPlay:true};
+  delete g.pendingShare[t.id];
+  const rd=w.sessions[sNum].rounds[g.round];
+  const idx=rd.actions.findIndex(x=>x.teamId===t.id);
+  if(idx>=0)rd.actions[idx]=rec;else rd.actions.push(rec);
+  if(earned.length)toast(t.name+' earned '+earned.map(k=>k.toUpperCase()).join(' + ')+' — touched '+conn+' house'+(conn===1?'':'s')+(connOther?' ('+connOther+' another team’s)':''));
+  playDraft=freshDraft();
+  g.turn++;
+  if(freeHexes(g).length===0&&g.round<w.numRounds){endGame('collapse');return;}
+  if(g.turn>=w.teams.length){closePlayRound();return;}
+  save();renderPlay();
+}
+
+/* ---- end of round: clean-up, then the houses make waste ---- */
+function closePlayRound(){
+  const w=cur(),g=game(),sNum=S.ui.session,r=g.round,rd=w.sessions[sNum].rounds[r];
+  rd.closed=true;
+  let cleaned=0;
+  if(r>1){const free=freeHexes(g).length;
+    const wc=shuffle(Object.keys(g.cells).filter(i=>g.cells[i].k==='waste'));
+    cleaned=Math.min(Math.floor(free/2),wc.length);
+    wc.slice(0,cleaned).forEach(i=>{delete g.cells[i];g.supply.waste++;});}
+  const bc=boardCounts(g);let due=bc.small+2*bc.large,placedW=0,shortSupply=0,shortSpace=0;
+  const free=shuffle(freeHexes(g));
+  while(due>0){
+    if(g.supply.waste<=0){shortSupply=due;break;}
+    if(placedW>=free.length){shortSpace=due;break;}
+    g.cells[free[placedW]]={k:'waste'};g.supply.waste--;placedW++;due--;}
+  rd.biodegrade=cleaned;rd.wasteAdded=placedW;
+  let msg='Round '+r+' closed — '+(cleaned?'forest cleared '+cleaned+' waste · ':'')+placedW+' waste added';
+  if(shortSupply)msg+=' · the box ran out of waste tokens';
+  toast(msg);
+  if(shortSpace>0||(freeHexes(g).length===0&&r<w.numRounds)){endGame('collapse');return;}
+  if(r>=w.numRounds){endGame('done');return;}
+  g.round++;g.turn=0;S.ui.round=g.round;
+  w.sessions[sNum].rounds[g.round].greenOverride=freeHexes(g).length;
+  playDraft=freshDraft();save();renderPlay();
+}
+function endGame(kind){
+  const w=cur(),g=game(),sess=w.sessions[S.ui.session];
+  g.status='ended';playDraft=null;
+  if(kind==='collapse'){g.result='collapse';g.collapseRound=g.round;
+    sess.outcome={result:'collapse',collapseRound:g.round,winner:'',notes:'Played live in the tool — the island filled in round '+g.round+'.'};}
+  else{const sc=playScores(w,g),elig=sc.filter(s=>s.held>0);
+    const top=elig.length?Math.max(...elig.map(s=>s.total)):0;
+    const winners=elig.filter(s=>s.total===top);
+    if(winners.length===1){g.result='win';
+      sess.outcome={result:'win',collapseRound:null,winner:winners[0].team.id,notes:'Played live in the tool.'};}
+    else{g.result='survived';
+      sess.outcome={result:'survived',collapseRound:null,winner:'',notes:'Played live in the tool.'};}}
+  save();renderPlay();
+}
+
+/* ---- Play screen ---- */
+function playBoardSVG(g,hot,sel){
+  const w=cur();const TEAMCOL=['#1565c0','#6a1b9a','#00838f','#ef6c00'];
+  const tcol={};w.teams.forEach((t,i)=>tcol[t.id]=TEAMCOL[i%TEAMCOL.length]);
+  let out=`<svg viewBox="${HEX_VB}" style="width:100%;height:auto;max-width:520px;display:block;margin:0 auto" role="img" aria-label="island board">`;
+  // the hole at the heart of the island — never playable
+  out+=`<polygon points="${hexPoly(HEX_HOLE.x,HEX_HOLE.y)}" style="fill:#d9edf6;stroke:#aacfdd;stroke-width:2;stroke-dasharray:5 4"></polygon>`;
+  for(let i=0;i<36;i++){const c=g.cells[i],hx=HEXES[i];
+    let cls='hx '+(c?c.k:'forest');
+    if(hot&&hot.has(i))cls+=' hot';
+    if(sel&&sel.has(i))cls+=' sel';
+    const fill=(c&&(c.k==='small'||c.k==='large')&&c.team)?` style="fill:${tcol[c.team]}"`:'';
+    out+=`<polygon points="${HEX_PTS[i]}" class="${cls}"${fill} onclick="hexTap(${i})"></polygon>`;
+    if(c){
+      if(c.k==='small'||c.k==='large')out+=`<text x="${hx.x}" y="${hx.y+2}" text-anchor="middle" font-size="${c.k==='large'?14:11}" pointer-events="none">${c.k==='large'?'🏰':'🏠'}</text><text x="${hx.x}" y="${hx.y+15}" text-anchor="middle" font-size="8" font-weight="700" fill="#fff" pointer-events="none">${teamTag(w,c.team)}</text>`;
+      else if(c.k==='r1'||c.k==='r3'){out+=`<text x="${hx.x}" y="${hx.y+(c.v?0:4)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff" pointer-events="none">${c.k.toUpperCase()}</text>`;
+        if(c.v)out+=`<text x="${hx.x}" y="${hx.y+13}" text-anchor="middle" font-size="9" font-weight="800" fill="#d9f7e8" pointer-events="none">+${c.v} free</text>`;}
+      else out+=`<text x="${hx.x}" y="${hx.y+4.5}" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" pointer-events="none">✕</text>`;
+    }
+  }
+  return out+'</svg>';
+}
+function playTurnPanel(w,g){
+  const t=w.teams[g.turn],d=playDraft,h=g.hands[t.id];
+  const anyAct=Object.keys(ACTIONS).some(k=>canAct(g,t.id,k));
+  const actBtns=Object.entries(ACTIONS).map(([k,a])=>{const ok=canAct(g,t.id,k);
+    return `<button class="act ${d.action===k?'sel':''}" ${ok?`onclick="pickAction('${k}')"`:'disabled'}>
+      <span>${a.icon} ${a.short}</span><small>${ok?esc(a.cost+' · '+a.gain):esc(whyNot(g,t.id,k))}</small></button>`;}).join('');
+  let payRow='';
+  if((d.action==='build_small'||d.action==='build_large'||d.action==='renovate')&&d.hex!=null){
+    const cs=payCombos(g,t.id,d.action,d.hex);
+    payRow=`<div class="row" style="gap:.4rem;margin:.3rem 0;align-items:center;flex-wrap:wrap"><small class="muted">paid with</small>
+      ${cs.map((c,j)=>`<button class="lev ${d.combo&&d.combo.lab===c.lab?'deep on':''}" onclick="pickCombo(${j})">${c.fb>0?'♻️':'🪵'} ${c.lab}${c.tag?` <small>(${c.tag})</small>`:''}</button>`).join('')}</div>`;
+  }else if(d.action==='remove_waste'&&d.wasteSel.length){
+    const cs=wasteCombos(h,d.wasteSel.length);
+    payRow=`<div class="row" style="gap:.4rem;margin:.3rem 0;align-items:center;flex-wrap:wrap"><small class="muted">paid with</small>
+      ${cs.map((c,j)=>`<button class="lev ${d.wastePay&&d.wastePay.lab===c.lab?'deep on':''}" onclick="pickWasteCombo(${j})">🪵 ${c.lab}</button>`).join('')}</div>`;
+  }
+  let hint='';
+  if(d.action==='build_small'||d.action==='build_large'){
+    if(d.hex==null)hint=`<div class="playhint">👆 Tap a free hex for the house — outlined hexes can pay. Each house it touches earns 1 token; spare value beside it (♻️) can pay too.</div>`;
+    else{const neigh=HEX_ADJ[d.hex].map(n=>g.cells[n]).filter(c=>c&&(c.k==='small'||c.k==='large'));
+      const conn=neigh.length,co=neigh.filter(c=>c.team!==t.id).length;
+      const need=d.combo?d.combo.r1+d.combo.r3:0;
+      hint=`<div class="playhint">📍 Touches <strong>${conn}</strong> house${conn===1?'':'s'}${co?` (${co} another team's)`:''} → draws <strong>${conn}</strong> token${conn===1?'':'s'}.${need?` Now tap <strong>${need-d.tokHexes.length}</strong> more free hex${need-d.tokHexes.length===1?'':'es'} beside the house for the paid token${need===1?'':'s'} — where you leave them is strategy.`:' Paid fully from the board — nothing to place.'}</div>`;}
+  }else if(d.action==='renovate'){
+    hint=d.hex==null?`<div class="playhint">👆 Tap <strong>any</strong> large house — another team's too. It needs a free hex beside it for the payment token.</div>`
+      :`<div class="playhint">📍 ${g.cells[d.hex].team===t.id?'Their own house':'<strong>Another team’s house</strong>'} becomes small (waste 2→1). Tap a free hex beside it to leave the payment token — its whole value stays usable by whoever builds next to it.${d.tokHexes.length?' ✓ placed.':''}</div>`;
+  }else if(d.action==='remove_waste'){
+    hint=`<div class="playhint">👆 Tap waste hexes to clean — value 3 each, paid with R3s or three R1s (hand holds ${h.r3} R3, ${h.r1} R1). Selected: <strong>${d.wasteSel.length}</strong>.</div>`;
+  }
+  const others=w.teams.filter(x=>x.id!==t.id);
+  const givenTxt=Object.entries(d.give).filter(([,o])=>o.r1+o.r3>0).map(([tid,o])=>{const tm=w.teams.find(x=>x.id===tid);
+    return (o.r1?o.r1+'×R1 ':'')+(o.r3?o.r3+'×R3 ':'')+'→ '+esc(tm?tm.name:'?');}).join(' · ');
+  const share=`<div class="step">Share tokens <span class="muted" style="font-weight:400">— optional; the rules never forbid it</span></div>
+    <div class="row" style="gap:.4rem;align-items:center">
+      <select id="giveTeam" style="width:auto;min-width:110px">${others.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
+      <button class="chip" onclick="giveTok('r1')">give 1 R1</button>
+      <button class="chip" onclick="giveTok('r3')">give 1 R3</button>
+      ${givenTxt?`<span class="tag good">🤝 ${givenTxt}</span><button class="btn sm ghost" onclick="clearGive()">undo</button>`:''}
+    </div>`;
+  const tags=`<div class="step">What would an observer mark? <span class="muted" style="font-weight:400">— tag it like a real session</span></div>
+    <div class="row" style="gap:.35rem;margin:.35rem 0">
+      <button class="chip ${d.crosstalk?'on':''}" onclick="togTag('crosstalk')">💬 talked to another team</button>
+      <button class="chip ${d.statedGoal?'on':''}" onclick="togTag('statedGoal')">🎯 named a shared goal</button>
+      <button class="chip ${d.anticipated?'on':''}" onclick="togTag('anticipated')">🔮 thought ahead</button>
+    </div>
+    <div class="row" style="gap:.35rem;margin:.35rem 0">
+      <button class="lev shallow ${d.leverage==='shallow'?'on':''}" onclick="togLev('shallow')">⚙️ small tweak</button>
+      <button class="lev deep ${d.leverage==='deep'?'on':''}" onclick="togLev('deep')">🌱 big change</button>
+    </div>`;
+  const ready=(d.action==='build_small'||d.action==='build_large')?(d.hex!=null&&d.combo&&d.tokHexes.length===d.combo.r1+d.combo.r3)
+    :d.action==='renovate'?(d.hex!=null&&d.combo&&d.tokHexes.length===1)
+    :d.action==='remove_waste'?(d.wasteSel.length>0&&!!d.wastePay):false;
+  return `<div class="card">
+    <div class="turnhead"><strong>🎲 ${esc(t.name)}'s turn</strong>
+      <span class="handtok">R1 × ${h.r1}</span><span class="handtok r3">R3 × ${h.r3}</span>
+      <small class="muted">team ${g.turn+1} of ${w.teams.length} · round ${g.round}</small></div>
+    <div class="step">1 · Choose the action</div>
+    <div class="actiongrid">${actBtns}</div>
+    ${payRow}${hint}
+    ${anyAct?'':`<div class="rec warn"><h4>Stuck</h4><p>${esc(t.name)} cannot afford any action this round.</p></div>`}
+    ${share}${tags}
+    <input type="text" id="p_notes" placeholder="optional note — shows in the data" value="${esc(d.notes||'')}" style="margin:.3rem 0">
+    <div class="row" style="margin-top:.4rem">
+      <button class="btn primary" style="flex:1;justify-content:center" ${ready?'':'disabled'} onclick="confirmTurn()">✓ Confirm ${esc(t.name)}'s turn</button>
+      ${d.action?`<button class="btn" onclick="resetTurn()">reset</button>`:''}
+      ${anyAct?'':`<button class="btn" onclick="skipTurn()">skip team</button>`}
+    </div>
+  </div>`;
+}
+function playEndPanel(w,g){
+  const sc=playScores(w,g);
+  const rows=sc.map((s,i)=>`<tr><td>${i+1}</td><td><strong>${esc(s.team.name)}</strong></td><td>${s.pts}</td><td>${s.held}</td><td><strong>${s.total}</strong></td><td>${s.held>0?'✓':'✗ none left'}</td></tr>`).join('');
+  const msg=g.result==='collapse'
+    ?`<div class="rec warn"><h4>💥 The island filled in round ${g.collapseRound}</h4><p>Everyone lost at once. That shared loss is the heart of the debrief: ask the room what they would change, then play the next session.</p></div>`
+    :`<div class="rec good"><h4>🏆 The island survived all ${w.numRounds} rounds</h4><p>${g.result==='win'?'A clear winner — most points while holding at least one resource. Leftover tokens count toward the score.':'The top score is shared, so no single winner. Leftover tokens count toward the score.'}</p></div>`;
+  return `<div class="card">
+    <h2>Game over — session ${S.ui.session}</h2>${msg}
+    <div class="scroll"><table><thead><tr><th>#</th><th>Team</th><th>Action points</th><th>Tokens left</th><th>Total</th><th>Holds a resource?</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="muted" style="font-size:.8rem;margin-top:.5rem">The outcome and every confirmed turn are saved in the session's data.</p>
+    <div class="row" style="margin-top:.5rem">
+      <button class="btn primary" onclick="go('insights')">📊 See the insights</button>
+      <button class="btn" onclick="startGame()">↻ Play this session again</button>
+      ${S.ui.session<w.numSessions?`<button class="btn" onclick="playSetSession(${S.ui.session+1})">▶ Next session</button>`:''}
+    </div>
+  </div>`;
+}
+function playScoreboard(w,g){
+  const sc=playScores(w,g);
+  return `<div class="card"><h3>Scoreboard</h3><div class="scroll"><table>
+    <thead><tr><th>Team</th><th>Points</th><th>R1 in hand</th><th>R3 in hand</th></tr></thead>
+    <tbody>${sc.map(s=>`<tr><td><strong>${esc(s.team.name)}</strong>${g.status==='playing'&&w.teams[g.turn]&&w.teams[g.turn].id===s.team.id?' <span class="tag">playing</span>':''}</td><td>${s.pts}</td><td>${s.hand.r1}</td><td>${s.hand.r3}</td></tr>`).join('')}</tbody></table></div>
+    <p class="muted" style="font-size:.76rem;margin-top:.4rem">A team must hold at least one token at the end to win. Leftover tokens add to the score.</p></div>`;
+}
+function renderPlay(){
+  const v=document.getElementById('view-play');const w=cur();
+  if(!w){v.innerHTML=noWorkshop();return;}
+  const sNum=S.ui.session;const g=game();
+  const sessSeg=Object.keys(w.sessions).map(n=>`<button class="${+n===sNum?'active':''}" onclick="playSetSession(${n})">Session ${n}</button>`).join('');
+  if(!g){
+    const hasData=Object.values(w.sessions[sNum].rounds).some(r=>r.actions.length);
+    v.innerHTML=`
+    <div class="card">
+      <div class="row spread">
+        <div><span class="eyebrow">Play — live demo</span><h1 style="margin:0">${esc(w.name)}</h1></div>
+        <div class="seg">${sessSeg}</div>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <h2>🎲 Play the game yourself</h2>
+        <p>You move for every team, one after the other — useful for showing a room how the game works. The board, the token box and the rules are all here. Each turn you confirm is saved as a logged action, so <a href="#" onclick="go('insights');return false">Insights</a> and <a href="#" onclick="go('data');return false">Data</a> fill up while you demonstrate.</p>
+        <ul style="font-size:.86rem;margin:.3rem 0 .6rem;padding-left:1.1rem">
+          <li>Every team starts with <strong>2 random tokens</strong> from the box.</li>
+          <li>Building next to houses — anyone's — earns tokens, the only way to gain resources.</li>
+          <li><strong>You choose where paid tokens sit</strong>, beside the new house. Spare value on them serves only a house built next to it, so placement is strategy.</li>
+          <li>Any large house can be renovated, another team's too — paid from hand; the payment stays on the board, fully usable.</li>
+          <li>When a round closes, every house makes waste and the free forest clears some. If the island fills before round ${w.numRounds}, everyone loses at once.</li>
+        </ul>
+        ${hasData?`<div class="rec warn" style="margin:.4rem 0"><h4>Session ${sNum} already has logged actions</h4><p>Starting a game replaces them. Pick another session above to keep them.</p></div>`:''}
+        <button class="btn primary block" onclick="startGame()">▶ Start session ${sNum} — ${w.teams.length} teams, ${w.numRounds} rounds</button>
+      </div>
+      <div class="card">
+        <h3>📦 What is in the box</h3>
+        <div class="row" style="gap:.4rem;margin:.4rem 0;flex-wrap:wrap">
+          <span class="tok resource"><i class="sw resource"></i> ${BOX.r1} R1 tokens</span>
+          <span class="tok resource"><i class="sw resource"></i> ${BOX.r3} R3 tokens</span>
+          <span class="tok house"><i class="sw house"></i> ${BOX.h1} small houses</span>
+          <span class="tok house"><i class="sw house"></i> ${BOX.h2} large houses</span>
+          <span class="tok waste"><i class="sw waste"></i> ${BOX.waste} waste tokens</span>
+          <span class="tok forest"><i class="sw forest" style="background:var(--forest-soft);box-shadow:inset 0 0 0 1.5px var(--forest)"></i> 36 hexes</span>
+        </div>
+        <p class="muted" style="font-size:.84rem">An R3 is worth three R1. A large house costs one R3 or two R1; a small house costs one R1. Tokens paid for a build stay on the board and take a hex each.</p>
+        <p class="muted" style="font-size:.84rem">Demo idea: build fast in session 1 and let the island fill, then replay a later session with sharing and clean-up. The change between the two shows up on the Insights screen by itself.</p>
+      </div>
+    </div>`;
+    return;
+  }
+  if(g.status==='playing'&&!playDraft)playDraft=freshDraft();
+  const t=w.teams[g.turn]||w.teams[0];const d=playDraft||freshDraft();
+  let hot=new Set(),sel=new Set();
+  if(g.status==='playing'&&d.action){
+    if(d.action==='build_small'||d.action==='build_large'){
+      if(d.hex==null)freeHexes(g).filter(i=>payCombos(g,t.id,d.action,i).length).forEach(i=>hot.add(i));
+      else{sel.add(d.hex);
+        if(d.combo&&d.combo.r1+d.combo.r3>0)adjFree(g,d.hex).forEach(i=>hot.add(i));
+        d.tokHexes.forEach(i=>sel.add(i));}}
+    else if(d.action==='renovate'){
+      if(d.hex==null)Object.keys(g.cells).forEach(i=>{if(g.cells[i].k==='large'&&adjFree(g,+i).length)hot.add(+i);});
+      else{sel.add(d.hex);adjFree(g,d.hex).forEach(i=>hot.add(i));d.tokHexes.forEach(i=>sel.add(i));}}
+    else if(d.action==='remove_waste'){Object.keys(g.cells).forEach(i=>{if(g.cells[i].k==='waste')hot.add(+i);});d.wasteSel.forEach(i=>sel.add(i));}
+  }
+  const bc=boardCounts(g);const free=freeHexes(g).length;const pctFull=Math.round((36-free)/36*100);
+  v.innerHTML=`
+  <div class="card">
+    <div class="row spread">
+      <div><span class="eyebrow">Play — live demo</span><h1 style="margin:0">${esc(w.name)}</h1></div>
+      <div class="seg">${sessSeg}</div>
+    </div>
+    <div class="row" style="gap:.5rem;margin-top:.55rem;flex-wrap:wrap">
+      <span class="tag">round ${Math.min(g.round,w.numRounds)} of ${w.numRounds}</span>
+      ${g.status==='playing'?`<span class="tag good">🎲 ${esc(t.name)} to play</span>`
+        :`<span class="tag ${g.result==='collapse'?'bad':'good'}">${g.result==='collapse'?'💥 collapsed in round '+g.collapseRound:'🏁 finished'}</span>`}
+      <span class="tag ${pctFull>80?'bad':pctFull>55?'warn':'good'}">${pctFull}% full</span>
+      ${boardSpare(g)>0?`<span class="tag good">♻️ ${boardSpare(g)} spare value on the board</span>`:''}
+      <button class="btn sm ghost" onclick="quitGame()">✕ stop game</button>
+    </div>
+    <div class="row" style="gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
+      <span class="tok forest"><i class="sw forest" style="background:var(--forest-soft);box-shadow:inset 0 0 0 1.5px var(--forest)"></i> ${free} free</span>
+      <span class="tok house"><i class="sw house"></i> ${bc.small+bc.large} houses (${bc.small}S/${bc.large}L)</span>
+      <span class="tok resource"><i class="sw resource"></i> ${bc.r1+bc.r3} tokens on board</span>
+      <span class="tok waste"><i class="sw waste"></i> ${bc.waste} waste</span>
+    </div>
+    <div class="supplyrow" style="margin-top:.5rem">
+      <small class="muted" style="align-self:center">box:</small>
+      <span class="tok resource">${g.supply.r1}/${BOX.r1} R1</span>
+      <span class="tok resource">${g.supply.r3}/${BOX.r3} R3</span>
+      <span class="tok house">${g.supply.h1}/${BOX.h1} small</span>
+      <span class="tok house">${g.supply.h2}/${BOX.h2} large</span>
+      <span class="tok waste">${g.supply.waste}/${BOX.waste} waste</span>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>The island</h3>
+      ${playBoardSVG(g,hot,sel)}
+      <div class="legend" style="margin-top:.5rem">
+        <span><i class="sw forest" style="background:var(--forest-soft);box-shadow:inset 0 0 0 1.5px var(--forest)"></i> free forest</span>
+        <span><i class="sw house"></i> houses (team colours)</span>
+        <span><i class="sw resource"></i> tokens paid onto the board</span>
+        <span><i class="sw waste"></i> waste</span>
+      </div>
+      ${g.status==='playing'&&g.round===1?'<p class="muted" style="font-size:.78rem;margin-top:.4rem">Clean-up starts when round 2 closes: every 2 free hexes clear 1 waste.</p>':''}
+    </div>
+    ${g.status==='playing'?playTurnPanel(w,g):playEndPanel(w,g)}
+  </div>
+  ${playScoreboard(w,g)}`;
 }
 
 /* =====================================================================
@@ -981,6 +1499,8 @@ function renderInsights(){
 
   const recs=recommendations(w,sm,mAll);
   const pool=computeSharedPool(w);
+  const helps={gifts:acts.reduce((s,a)=>s+(a.sharedGiven||0),0),board:pool.takenTotal,
+    renos:acts.filter(a=>a.renovatedOther).length,touch:acts.filter(a=>(a.touchedOther||0)>0).length};
   // pooled statistics across ALL workshops (sign test + Wilson range)
   const MEAS=[{k:'protect',lab:'Protecting the island',obj:1},{k:'boardshare',lab:'Sharing through the board',obj:1},{k:'together',lab:'Working together',obj:0},{k:'ahead',lab:'Thinking ahead',obj:0}];
   const statRows=MEAS.map(m=>{const g=generalisation(m.k);const[vc,vt]=statVerdict(g);const eff=g.up+g.down;
@@ -1022,6 +1542,17 @@ function renderInsights(){
       <div class="metric"><div class="v">${pool.poolNow}</div><div class="lab">spare value still on the board</div></div>
     </div>
     ${(pool.leftTotal===0&&pool.takenTotal===0)?'<p class="muted" style="font-size:.78rem;margin-top:.5rem">Nothing here yet — teams are paying exactly what each action needs. It fills in when a team pays an R3 for a small build, or marks an action “board leftover”.</p>':''}
+  </div>
+
+  <div class="card">
+    <h3>🤝 Four ways teams help each other</h3>
+    <p class="muted" style="font-size:.82rem">Each is a different route to the same habit — treating the island as shared. Watch which routes a group discovers first.</p>
+    <div class="grid g4" style="margin-top:.6rem">
+      <div class="metric"><div class="v">${helps.gifts}</div><div class="lab">tokens handed to another team</div></div>
+      <div class="metric"><div class="v">${helps.board}</div><div class="lab">value picked up from the board</div></div>
+      <div class="metric"><div class="v">${helps.renos}</div><div class="lab">another team's house renovated</div></div>
+      <div class="metric"><div class="v">${helps.touch}</div><div class="lab">builds touching another team's house</div></div>
+    </div>
   </div>
 
   <div class="grid g2">
@@ -1187,6 +1718,9 @@ function renderData(){
       <tr><td>Thinking ahead</td><td>think-ahead marks ÷ all actions</td><td>how often a team plans before moving</td></tr>
       <tr><td>Touched per build</td><td>houses touched ÷ number of builds</td><td>how a team earns its resources</td></tr>
       <tr><td>Highest waste / tiles filled</td><td>most waste on the board / share of 36 tiles used</td><td>how close the island came to filling</td></tr>
+      <tr><td>touchedOtherTeams</td><td>of the houses touched, how many belonged to another team</td><td>building beside a rival pays — quiet interdependence</td></tr>
+      <tr><td>renovatedOtherTeam</td><td>1 when the renovated large house belonged to another team</td><td>cleaning up someone else's footprint</td></tr>
+      <tr><td>source</td><td>"observed" = logged while watching real teams; "played" = made on the Play screen</td><td>lets you keep demo games apart from real groups in analysis</td></tr>
     </tbody></table></div>
   </div>
   <div class="card">
@@ -1197,10 +1731,10 @@ function renderData(){
 function csvCell(s){s=String(s??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
 function download(name,text,type){const b=new Blob([text],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
 function exportCSV(){const w=cur();if(!w)return;
-  const head=['workshop','program','facilitator','date','session','round','team','action','points','spentR1','spentR3','usedFromBoard','surplusLeft','housesTouched','resGained','wasteRemoved','sharedGiven','sharedReceived','crosstalk','statedGoal','anticipated','leverage','notes'];
+  const head=['workshop','program','facilitator','date','session','round','team','action','points','spentR1','spentR3','usedFromBoard','surplusLeft','housesTouched','touchedOtherTeams','renovatedOtherTeam','resGained','wasteRemoved','sharedGiven','sharedReceived','crosstalk','statedGoal','anticipated','leverage','source','notes'];
   const lines=[head.join(',')];
   allActions(w).forEach(a=>{const t=w.teams.find(x=>x.id===a.teamId);
-    lines.push([w.name,w.program,w.facilitator,w.date,a.session,a.round,t?.name||'',a.action,actionPoints(a),a.spentR1||0,a.spentR3||0,boardUse(a),surplusLeftBy(a),a.connections||0,a.connections||0,a.wasteRemoved||0,a.sharedGiven||0,a.sharedReceived||0,a.crosstalk?1:0,a.statedGoal?1:0,a.anticipated?1:0,a.leverage||'',a.notes||''].map(csvCell).join(','));});
+    lines.push([w.name,w.program,w.facilitator,w.date,a.session,a.round,t?.name||'',a.action,actionPoints(a),a.spentR1||0,a.spentR3||0,boardUse(a),surplusLeftBy(a),a.connections||0,a.touchedOther||0,a.renovatedOther?1:0,a.connections||0,a.wasteRemoved||0,a.sharedGiven||0,a.sharedReceived||0,a.crosstalk?1:0,a.statedGoal?1:0,a.anticipated?1:0,a.leverage||'',a.viaPlay?'played':'observed',a.notes||''].map(csvCell).join(','));});
   download(slug(w.name)+'_actions.csv',lines.join('\n'),'text/csv');toast('Actions CSV exported');
 }
 function exportSummaryCSV(){const w=cur();if(!w)return;
